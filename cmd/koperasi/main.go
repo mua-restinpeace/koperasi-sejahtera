@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mua-restinpeace/koperasi-sejahtera.git/internal/config"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
 	_ "github.com/joho/godotenv/autoload"
 )
 

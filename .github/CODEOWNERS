@@ -1,0 +1,10 @@
+ /internal/service/batas*.go        @mua-restinpeace
+ /internal/service/jadwal*.go       @mua-restinpeace
+ /internal/service/denda*.go        @mua-restinpeace
+ /internal/service/alokasi*.go      @mua-restinpeace
+ /internal/service/pelunasan*.go    @mua-restinpeace
+ /migrations/                       @mua-restinpeace
+ /internal/router/router.go         @mua-restinpeace
+ /cmd/koperasi/main.go              @mua-restinpeace
+ /templates/layout.html             @mua-restinpeace
+ /.github/                          @mua-restinpeace

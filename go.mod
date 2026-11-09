@@ -1,4 +1,4 @@
-module github.com/mua-restinpeace/koperasi-sejahtera.git
+module github.com/mua-restinpeace/koperasi-sejahtera
 
 go 1.27.0
 
