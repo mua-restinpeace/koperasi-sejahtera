@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cek format (gofmt)
+        run: |
+          berkas=$(gofmt -l .)
+          if [ -n "$berkas" ]; then
+            echo "Berkas ini belum diformat, jalankan 'make fmt':"
+            echo "$berkas"
+            exit 1
+          fi
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Tes
+        run: go test -race ./...

@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mua-restinpeace/koperasi-sejahtera.git/internal/config"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
 )
 
 func main() {
-	log :=slog.New(slog.NewTextHandler(os.Stderr, nil))
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	if err := run(log); err != nil {
 		log.Error("aplikasi berhenti", "error", err)
 		os.Exit(1)
