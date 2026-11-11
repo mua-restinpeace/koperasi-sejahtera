@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,7 +13,10 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/database"
 )
+
+const zonaBisnis = "Asia/Jakarta"
 
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -28,6 +32,22 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	_, err = time.LoadLocation(zonaBisnis)
+	if err != nil {
+		return fmt.Errorf("error memuat zona waktu: %w", err)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	db, err := database.NewDB(ctx, cfg.DSN)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+	_ = database.Basis{DB: db}
+
 	httpSrv := &http.Server{
 		Addr:              cfg.Alamat,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -35,9 +55,6 @@ func run(log *slog.Logger) error {
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {
