@@ -1,0 +1,84 @@
+{{define "sidebar"}}
+<aside class="sidebar">
+    <div class="logo">
+        <i>K</i>
+        <div>
+            <b>Koperasi Sejahtera</b>
+            <small>Koperasi Simpan Pinjam</small>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/" class="{{if eq .MenuAktif "dashboard"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+            Dashboard
+        </a>
+
+        <a href="/pinjaman" class="{{if eq .MenuAktif "pinjaman"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <path d="M6 3h9l4 4v14H6z"/>
+                <path d="M9 13h7M9 17h5"/>
+            </svg>
+            Pengajuan Pinjaman
+        </a>
+
+        <a href="/anggota" class="{{if eq .MenuAktif "anggota"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>
+            </svg>
+            Anggota
+        </a>
+
+        <a href="/angsuran" class="{{if eq .MenuAktif "angsuran"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="16" rx="2"/>
+                <path d="M3 10h18M8 3v4M16 3v4"/>
+            </svg>
+            Angsuran
+        </a>
+
+        <a href="/simpanan" class="{{if eq .MenuAktif "simpanan"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="6" width="18" height="13" rx="2"/>
+                <path d="M3 11h18"/>
+            </svg>
+            Simpanan
+        </a>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+
+    <a href="/pengaturan" class="sidebar-settings {{if eq .MenuAktif "pengaturan"}}active{{end}}">
+        <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>
+        </svg>
+        Pengaturan
+    </a>
+
+    <div class="sidebar-user">
+        <div class="avatar">BP</div>
+
+        <div class="user-info">
+            <b>{{.Pengguna.NamaLengkap}}</b>
+            <small>Pengurus</small>
+        </div>
+
+        <form method="post" action="/logout">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+            <button type="submit" class="logout-btn" aria-label="Keluar">
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+</aside>
+{{end}}
