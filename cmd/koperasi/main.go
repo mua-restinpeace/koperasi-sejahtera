@@ -14,6 +14,11 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/database"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/handler"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/repository"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/router"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
+	"github.com/mua-restinpeace/koperasi-sejahtera/templates"
 )
 
 const zonaBisnis = "Asia/Jakarta"
@@ -46,10 +51,21 @@ func run(log *slog.Logger) error {
 	}
 
 	defer db.Close()
-	_ = database.Basis{DB: db}
+	sumber := database.Basis{DB: db}
+
+	// Repository tidak menyimpan state
+	// service menerima keduanya lewat interface
+	authService := service.NewAuthService(sumber, repository.PenggunaRepo{}, repository.SesiRepo{}, service.HasherPBKDF2{}, time.Duration(cfg.SesiJam)*time.Hour, nil, log)
+
+	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{Auth: authService})
+
+	if err != nil {
+		return err
+	}
 
 	httpSrv := &http.Server{
 		Addr:              cfg.Alamat,
+		Handler:           router.NewRouter(h, authService, log),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

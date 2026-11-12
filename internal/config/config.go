@@ -20,6 +20,9 @@ type Config struct {
 	KelipatanBatasPinjam int   // batas pinjaman = kelipatan x (pokok + wajib)
 	TenorMin             int   // bulan
 	TenorMax             int   // bulan
+
+	SesiJam      int  // ;ama sesi login dalam jam
+	CookieSecure bool // true bila aplikasi diakses lewat https
 }
 
 func Default() Config {
@@ -33,6 +36,7 @@ func Default() Config {
 		KelipatanBatasPinjam: 3,
 		TenorMin:             6,
 		TenorMax:             24,
+		SesiJam:              12,
 	}
 }
 
@@ -65,6 +69,11 @@ func Load() (Config, error) {
 	setInt(&c.KelipatanBatasPinjam, "KOPERASI_KELIPATAN_BATAS_PINJAM")
 	setInt(&c.TenorMin, "KOPERASI_TENOR_MIN")
 	setInt(&c.TenorMax, "KOPERASI_TENOR_MAX")
+	setInt(&c.SesiJam, "KOPERASI_SESI_JAM")
+
+	if err == nil {
+		c.CookieSecure, err = envBool("KOPERASI_COOKIE_SECURE", c.CookieSecure)
+	}
 
 	if err != nil {
 		return Config{}, err
@@ -109,4 +118,18 @@ func envInt64(key string, def int64) (int64, error) {
 	}
 
 	return n, nil
+}
+
+func envBool(key string, def bool) (bool, error) {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return def, nil
+	}
+
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("config: %s harus true atau false: %w", key, err)
+	}
+
+	return b, nil
 }

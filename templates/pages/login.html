@@ -1,0 +1,94 @@
+{{define "content"}}
+<div id="login">
+
+    <!-- Login header -->
+    <div class="top">
+        <div class="logo lg">
+            <i>K</i>
+            <div>
+                <b>Koperasi Sejahtera</b>
+                <small>Koperasi Karyawan Sejahtera Simpan Pinjam</small>
+            </div>
+        </div>
+
+        <div class="lang">
+            <span class="on">ID</span>
+            <span>EN</span>
+        </div>
+    </div>
+
+    <!-- Login form -->
+    <div class="mid">
+        <div class="lcard">
+
+            <h2>Selamat Datang</h2>
+
+            <p class="d">
+                Masuk ke portal manajemen untuk mengelola data anggota,
+                pencatatan pinjaman, dan pembukuan simpanan.
+            </p>
+
+            {{if .Error}}
+                <p class="galat" role="alert">{{.Error}}</p>
+            {{end}}
+
+            <form method="post" action="/login">
+
+                <div class="login-field">
+                    <label class="lb" for="username">USERNAME</label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="{{.Username}}"
+                        placeholder="Contoh: Jhon Doe"
+                        autocomplete="username"
+                        aria-label="Username"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="login-field">
+                    <label class="lb" for="password">
+                        PASSWORD
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        autocomplete="current-password"
+                        aria-label="Password"
+                        required
+                    >
+                </div>
+
+                <button class="btn login-submit" type="submit">
+                    Masuk →
+                </button>
+
+            </form>
+
+            <div class="help">
+                Butuh bantuan akses atau reset akun?
+                <b>Hubungi Master Admin / IT Koperasi</b>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Login footer -->
+    <footer class="login-footer">
+        <span>© 2026 Koperasi Sejahtera Indonesia.</span>
+
+        <span>
+            Kebijakan Privasi &nbsp;&nbsp;
+            Standar Keamanan &nbsp;&nbsp;
+            Bantuan Sekretariat
+        </span>
+    </footer>
+
+</div>
+{{end}}

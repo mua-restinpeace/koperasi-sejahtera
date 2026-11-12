@@ -5,5 +5,5 @@ type Pengguna struct {
 	Username     string
 	PasswordHash string
 	NamaLengkap  string
-	Aktif        string
+	Aktif        bool
 }

@@ -14,6 +14,9 @@ import (
 // DBTX adalah bagian dari *sql.DB dan *sql.Tx yang dipakai repository, sehingga
 // fungsi repository yang sama dapat dijalankan di dalam maupun di luar transaksi.
 type DBTX interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 // Sumber adalah sumber data yang dapat dipakai langsung (sebagai DBTX) atau

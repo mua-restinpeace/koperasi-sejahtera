@@ -47,10 +47,11 @@ make migrasi-turun     # membatalkan satu migrasi terakhir
 URL database migrasi dapat diganti: `make migrasi-naik MIGRATE_URL='mysql://user:pass@tcp(host:3306)/db?multiStatements=true'`.
 Migrasi baru: buat sepasang berkas `migrations/00000N_nama.up.sql` dan `.down.sql`. Jangan mengubah migrasi yang sudah di-merge ke `main`.
 
-## 5. Buat akun pengurus
+## 5. Akun pengurus
 
 ```sh
-make buat-pengguna ARGS='-username ani -nama "Ani Lestari"'
+Username=admin
+Password=adminpassword99
 ```
 
 Kata sandi diketik setelah diminta (minimal 10 karakter; terlihat di layar, dibaca dari stdin supaya tidak masuk riwayat shell).
