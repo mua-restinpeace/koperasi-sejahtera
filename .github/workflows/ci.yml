@@ -29,3 +29,37 @@ jobs:
 
       - name: Tes
         run: go test -race ./...
+
+  integrasi:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: koperasi_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      KOPERASI_TEST_DSN: root:root@tcp(127.0.0.1:3306)/koperasi_test?parseTime=true&loc=UTC&time_zone=%27%2B00%3A00%27
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Terapkan migrasi (urut nama berkas)
+        run: |
+          for f in $(ls migrations/*.up.sql | sort); do
+            echo "menerapkan $f"
+            mysql -h 127.0.0.1 -uroot -proot koperasi_test < "$f"
+          done
+
+      - name: Tes integrasi
+        run: go test -tags integration -race -count=1 ./internal/...
