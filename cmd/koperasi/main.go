@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,7 +13,15 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/database"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/handler"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/repository"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/router"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
+	"github.com/mua-restinpeace/koperasi-sejahtera/templates"
 )
+
+const zonaBisnis = "Asia/Jakarta"
 
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -28,16 +37,40 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	_, err = time.LoadLocation(zonaBisnis)
+	if err != nil {
+		return fmt.Errorf("error memuat zona waktu: %w", err)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	db, err := database.NewDB(ctx, cfg.DSN)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+	sumber := database.Basis{DB: db}
+
+	// Repository tidak menyimpan state
+	// service menerima keduanya lewat interface
+	authService := service.NewAuthService(sumber, repository.PenggunaRepo{}, repository.SesiRepo{}, service.HasherPBKDF2{}, time.Duration(cfg.SesiJam)*time.Hour, nil, log)
+
+	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{Auth: authService})
+
+	if err != nil {
+		return err
+	}
+
 	httpSrv := &http.Server{
 		Addr:              cfg.Alamat,
+		Handler:           router.NewRouter(h, authService, log),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {

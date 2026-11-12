@@ -1,0 +1,39 @@
+
+{{define "layout"}}
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{{.Judul}} - Koperasi Karyawan Sejahtera</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+    {{template "sidebar" .}}
+
+    <main class="main">
+        {{template "header" .}}
+
+        <div class="page-container">
+            {{if .Pesan}}
+                <p class="sukses" role="status">{{.Pesan}}</p>
+            {{end}}
+
+            {{template "content" .}}
+        </div>
+
+        {{template "footer" .}}
+    </main>
+
+    <script src="/static/js/app.js" defer></script>
+</body>
+</html>
+{{end}}

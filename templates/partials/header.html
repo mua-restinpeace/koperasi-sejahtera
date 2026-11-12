@@ -1,0 +1,23 @@
+
+{{define "header"}}
+<header class="topbar">
+    <div class="global-search">
+        <svg viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="M20 20l-4-4"/>
+        </svg>
+
+        <input
+            type="text"
+            placeholder="Cari anggota, no. pinjaman..."
+            aria-label="Pencarian global"
+        >
+    </div>
+
+    <button type="button" class="notification-btn" aria-label="Notifikasi">
+        <svg viewBox="0 0 24 24">
+            <path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/>
+        </svg>
+    </button>
+</header>
+{{end}}
