@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"crypto/subtle"
-	"fmt"
 	"net/http"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
@@ -24,25 +23,9 @@ type Authenticator interface {
 func Sesi(a Authenticator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// if c, err := r.Cookie(NamaCookieSesi); err == nil {
-			// 	if id, err := a.Authenticate(r.Context(), c.Value); err == nil {
-			// 		r = r.WithContext(service.DenganIdentitas(r.Context(), id))
-			// 	}
-			// }
-			c, err := r.Cookie(NamaCookieSesi)
-
-			if err != nil {
-				fmt.Println("SESSION COOKIE NOT FOUND:", err)
-			} else {
-				id, err := a.Authenticate(r.Context(), c.Value)
-
-				if err != nil {
-					fmt.Println("SESSION AUTHENTICATION FAILED:", err)
-				} else {
-					fmt.Println("SESSION AUTHENTICATED:", id.Username)
-					r = r.WithContext(
-						service.DenganIdentitas(r.Context(), id),
-					)
+			if c, err := r.Cookie(NamaCookieSesi); err == nil {
+				if id, err := a.Authenticate(r.Context(), c.Value); err == nil {
+					r = r.WithContext(service.DenganIdentitas(r.Context(), id))
 				}
 			}
 			next.ServeHTTP(w, r)
@@ -55,7 +38,6 @@ func RequireLogin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := service.IdentitasDari(r.Context()); !ok {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			fmt.Println("redirecting to /login")
 			return
 		}
 		next.ServeHTTP(w, r)

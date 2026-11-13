@@ -105,3 +105,44 @@ func (f *fakeSesi) HapusByTokenHash(_ context.Context, _ database.DBTX, h string
 }
 
 func (f *fakeSesi) HapusKedaluwarsa(context.Context, database.DBTX, time.Time) error { return nil }
+
+type fakeAudit struct {
+	entri []model.Audit
+	err   error
+}
+
+func (f *fakeAudit) Create(_ context.Context, _ database.DBTX, e model.Audit) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.entri = append(f.entri, e)
+	return nil
+}
+
+type fakeAnggota struct {
+	dibuat []model.Anggota
+	nomor  map[string]bool
+}
+
+func (f *fakeAnggota) Create(_ context.Context, _ database.DBTX, a model.Anggota) (int64, error) {
+	if f.nomor[a.NomorAnggota] {
+		return 0, repository.ErrDuplikat
+	}
+	if f.nomor == nil {
+		f.nomor = map[string]bool{}
+	}
+	f.nomor[a.NomorAnggota] = true
+	f.dibuat = append(f.dibuat, a)
+	return int64(len(f.dibuat)), nil
+}
+
+func (f *fakeAnggota) Daftar(context.Context, database.DBTX) ([]model.Anggota, error) {
+	return f.dibuat, nil
+}
+
+type fakeSimpanan struct{ dibuat []model.TransaksiSimpanan }
+
+func (f *fakeSimpanan) Create(_ context.Context, _ database.DBTX, t model.TransaksiSimpanan) (int64, error) {
+	f.dibuat = append(f.dibuat, t)
+	return int64(len(f.dibuat)), nil
+}

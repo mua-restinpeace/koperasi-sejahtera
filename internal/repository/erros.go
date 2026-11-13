@@ -13,8 +13,8 @@ var (
 	ErrDuplikat       = errors.New("repository: data sudah ada")
 )
 
-// isDuplikat mengenali kesalahan MySQL 1062 (duplicate entry)
-func isDuplikat(err error) bool {
+// dataDuplikat mengenali kesalahan MySQL 1062 (duplicate entry)
+func dataDuplikat(err error) bool {
 	var mysqlError *mysql.MySQLError
 
 	return errors.As(err, &mysqlError) && mysqlError.Number == 1062

@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
@@ -15,6 +16,11 @@ type Handler struct {
 	log  *slog.Logger
 	tmpl map[string]*template.Template
 	svc  Service
+}
+
+type Service struct {
+	Auth    AuthService
+	Anggota AnggotaService
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang
@@ -64,4 +70,10 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 	}
 
 	return &Handler{cfg: cfg, log: log, tmpl: tmpl, svc: svc}, nil
+}
+
+// galat mencatat kesalahan tak terduga dan menampilkan pesan umum ke pengguna.
+func (h *Handler) error(w http.ResponseWriter, r *http.Request, err error) {
+	h.log.Error("handler gagal", "method", r.Method, "path", r.URL.Path, "error", err)
+	http.Error(w, "Terjadi kesalahan pada server", http.StatusInternalServerError)
 }
