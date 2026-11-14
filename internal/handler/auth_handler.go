@@ -15,10 +15,6 @@ type AuthService interface {
 	Logout(ctx context.Context, token string) error
 }
 
-type Service struct {
-	Auth AuthService
-}
-
 type dataLogin struct {
 	Halaman
 	Username string

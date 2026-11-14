@@ -45,10 +45,16 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 
 	r := &router{mux: mux, h: h}
 
+	r.Public("GET /healthz", h.Healthz)
 	r.Public("GET /login", h.FormLogin)
 	r.Public("POST /login", h.Login)
 	r.Protected("GET /{$}", h.Beranda)
 	r.Protected("POST /logout", h.Logout)
+
+	// Anggota
+	r.Protected("GET /anggota", r.h.GetListFiltered)
+	r.Protected("GET /anggota/baru", r.h.FormAnggota)
+	r.Protected("POST /anggota", r.h.SimpanAnggota)
 
 	// urutan dari luar ke dalam: header, log, batas body, sesi, lalu mux.
 	var out http.Handler = mux

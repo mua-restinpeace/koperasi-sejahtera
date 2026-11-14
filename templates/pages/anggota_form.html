@@ -1,0 +1,138 @@
+
+{{define "content"}}
+<section class="page anggota-form-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Tambah Anggota</h1>
+            <p class="anggota-form-subtitle">
+                Daftarkan anggota baru ke dalam koperasi.
+            </p>
+        </div>
+
+        <a href="/anggota" class="anggota-back-link">
+            ← Kembali ke Anggota
+        </a>
+    </div>
+
+    <div class="anggota-form-card">
+
+        <div class="anggota-form-intro">
+            <h3>Data Anggota Baru</h3>
+            <p>Lengkapi informasi anggota di bawah ini.</p>
+        </div>
+
+        <form method="POST" action="/anggota" class="anggota-form">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{.CSRF}}"
+            >
+
+            <div class="anggota-form-grid">
+
+                <div class="anggota-field">
+                    <label for="nomor_anggota">
+                        Nomor anggota
+                        <span class="anggota-required">*</span>
+                    </label>
+
+                    <input
+                        id="nomor_anggota"
+                        name="nomor_anggota"
+                        type="text"
+                        value="{{.Isian.NomorAnggota}}"
+                        maxlength="20"
+                        placeholder="Contoh: A-0143"
+                        autocomplete="off"
+                        required
+                    >
+
+                    {{with index .Error "nomor_anggota"}}
+                        <p class="anggota-error">{{.}}</p>
+                    {{end}}
+                </div>
+
+                <div class="anggota-field">
+                    <label for="tanggal_bergabung">
+                        Tanggal bergabung
+                    </label>
+
+                    <input
+                        id="tanggal_bergabung"
+                        name="tanggal_bergabung"
+                        type="date"
+                        value="{{.Isian.TanggalBergabung}}"
+                    >
+
+                    {{with index .Error "tanggal_bergabung"}}
+                        <p class="anggota-error">{{.}}</p>
+                    {{end}}
+                </div>
+
+            </div>
+
+            <div class="anggota-field">
+                <label for="nama_lengkap">
+                    Nama lengkap
+                    <span class="anggota-required">*</span>
+                </label>
+
+                <input
+                    id="nama_lengkap"
+                    name="nama_lengkap"
+                    type="text"
+                    value="{{.Isian.NamaLengkap}}"
+                    maxlength="100"
+                    placeholder="Masukkan nama lengkap anggota"
+                    autocomplete="name"
+                    required
+                >
+
+                {{with index .Error "nama_lengkap"}}
+                    <p class="anggota-error">{{.}}</p>
+                {{end}}
+            </div>
+
+            <div class="anggota-field">
+                <label for="no_telepon">
+                    Nomor telepon
+                    <span class="anggota-optional">(Opsional)</span>
+                </label>
+
+                <input
+                    id="no_telepon"
+                    name="no_telepon"
+                    type="tel"
+                    value="{{.Isian.NoTelepon}}"
+                    maxlength="20"
+                    placeholder="Contoh: 0812-3456-7890"
+                    autocomplete="tel"
+                >
+
+                {{with index .Error "no_telepon"}}
+                    <p class="anggota-error">{{.}}</p>
+                {{end}}
+            </div>
+
+            <div class="anggota-form-note">
+                <span class="anggota-required">*</span>
+                Wajib diisi.
+            </div>
+
+            <div class="anggota-form-actions">
+                <a href="/anggota" class="anggota-cancel-btn">
+                    Batal
+                </a>
+
+                <button type="submit" class="btn anggota-save-btn">
+                    Simpan Anggota
+                    <span aria-hidden="true">→</span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</section>
+{{end}}

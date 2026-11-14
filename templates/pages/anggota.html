@@ -1,0 +1,166 @@
+
+{{define "content"}}
+<section class="page anggota-page">
+
+    <div class="anggota-heading">
+        <div>
+            <h1>Data Anggota</h1>
+            <p class="anggota-subtitle">Master data anggota koperasi</p>
+        </div>
+
+        <a href="/anggota/baru" class="btn anggota-add-btn">
+            + Tambah Anggota
+        </a>
+    </div>
+
+    <div class="anggota-card">
+
+        <form action="/anggota" method="GET" class="anggota-toolbar">
+            <div class="anggota-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m20 20-4-4"/>
+                </svg>
+
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Cari no. anggota atau nama"
+                    value="{{.Cari}}"
+                    aria-label="Cari anggota"
+                >
+            </div>
+
+            <select
+                name="status"
+                class="anggota-filter"
+                aria-label="Filter status anggota"
+                onchange="this.form.submit()"
+            >
+                <option value="" {{if eq .FilterStatus ""}}selected{{end}}>
+                    Semua status
+                </option>
+                <option value="Aktif" {{if eq .FilterStatus "Aktif"}}selected{{end}}>
+                    Aktif
+                </option>
+                <option value="Keluar" {{if eq .FilterStatus "Keluar"}}selected{{end}}>
+                    Keluar
+                </option>
+            </select>
+
+            <input type="hidden" name="limit" value="{{.Limit}}">
+
+            <button type="submit" class="btn-cari">
+                Cari
+            </button>
+        </form>
+
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>No. anggota</th>
+                        <th>Nama lengkap</th>
+                        <th>No. telepon</th>
+                        <th>Tanggal bergabung</th>
+                        <th>Status</th>
+                        <th>Tanggal keluar</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {{range .Anggota}}
+                    <tr>
+                        <td class="anggota-number">
+                            {{.NomorAnggota}}
+                        </td>
+
+                        <td>
+                            <strong>{{.NamaLengkap}}</strong>
+                        </td>
+
+                        <td>{{.NoTelepon}}</td>
+
+                        <td>{{.TanggalBergabung.Format "02-01-2006"}}</td>
+
+                        <td>
+                            {{if eq .Status "aktif"}}
+                                <span class="anggota-badge anggota-badge-active">
+                                    Aktif
+                                </span>
+                            {{else}}
+                                <span class="anggota-badge anggota-badge-exit">
+                                    Keluar
+                                </span>
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if .TanggalKeluar}}
+                                {{.TanggalKeluar.Format "02-01-2006"}}
+                            {{else}}
+                                <span class="anggota-muted">—</span>
+                            {{end}}
+                        </td>
+
+                        <td class="anggota-action">
+                            <a
+                                href="/anggota/detail/{{.ID}}"
+                                class="anggota-detail-btn"
+                            >
+                                Detail
+                            </a>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="7" class="anggota-empty">
+                            Tidak ada data anggota yang ditemukan.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="anggota-bottom">
+            <span class="anggota-info">
+                Menampilkan {{.Mulai}}–{{.Sampai}} dari {{.Total}} anggota
+                · Data anggota keluar tetap tersimpan
+            </span>
+
+            <nav class="anggota-pagination" aria-label="Navigasi halaman">
+
+                {{if gt .CurrentHalaman 1}}
+                    <a href="/anggota?page={{.HalamanPrev}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                        ‹
+                    </a>
+                {{else}}
+                    <span class="disabled">‹</span>
+                {{end}}
+
+                {{range .NomorHalaman}}
+                    {{if eq . $.CurrentHalaman}}
+                        <span class="current">{{.}}</span>
+                    {{else}}
+                        <a href="/anggota?page={{.}}&amp;q={{urlquery $.Cari}}&amp;status={{urlquery $.FilterStatus}}&amp;limit={{$.Limit}}">
+                            {{.}}
+                        </a>
+                    {{end}}
+                {{end}}
+
+                {{if lt .CurrentHalaman .TotalHalaman}}
+                    <a href="/anggota?page={{.HalamanNext}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                        ›
+                    </a>
+                {{else}}
+                    <span class="disabled">›</span>
+                {{end}}
+
+            </nav>
+        </div>
+
+    </div>
+</section>
+{{end}}
