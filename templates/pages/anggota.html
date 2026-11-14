@@ -48,7 +48,9 @@
                 </option>
             </select>
 
-            <button type="submit" class="anggota-search-submit">
+            <input type="hidden" name="limit" value="{{.Limit}}">
+
+            <button type="submit" class="btn-cari">
                 Cari
             </button>
         </form>
@@ -83,7 +85,7 @@
                         <td>{{.TanggalBergabung.Format "02-01-2006"}}</td>
 
                         <td>
-                            {{if eq .Status "Aktif"}}
+                            {{if eq .Status "aktif"}}
                                 <span class="anggota-badge anggota-badge-active">
                                     Aktif
                                 </span>
@@ -129,9 +131,11 @@
             </span>
 
             <nav class="anggota-pagination" aria-label="Navigasi halaman">
+
                 {{if gt .CurrentHalaman 1}}
-                    <a href="/anggota?page={{.HalamanPrev}}&q={{.Cari}}&status={{.FilterStatus}}"
-                       aria-label="Halaman sebelumnya">‹</a>
+                    <a href="/anggota?page={{.HalamanPrev}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                        ‹
+                    </a>
                 {{else}}
                     <span class="disabled">‹</span>
                 {{end}}
@@ -140,18 +144,20 @@
                     {{if eq . $.CurrentHalaman}}
                         <span class="current">{{.}}</span>
                     {{else}}
-                        <a href="/anggota?page={{.}}&q={{$.Cari}}&status={{$.FilterStatus}}">
+                        <a href="/anggota?page={{.}}&amp;q={{urlquery $.Cari}}&amp;status={{urlquery $.FilterStatus}}&amp;limit={{$.Limit}}">
                             {{.}}
                         </a>
                     {{end}}
                 {{end}}
 
                 {{if lt .CurrentHalaman .TotalHalaman}}
-                    <a href="/anggota?page={{.HalamanNext}}&q={{.Cari}}&status={{.FilterStatus}}"
-                       aria-label="Halaman berikutnya">›</a>
+                    <a href="/anggota?page={{.HalamanNext}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                        ›
+                    </a>
                 {{else}}
                     <span class="disabled">›</span>
                 {{end}}
+
             </nav>
         </div>
 

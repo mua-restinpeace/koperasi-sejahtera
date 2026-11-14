@@ -42,6 +42,14 @@ func (*fakeAuth) Authenticate(_ context.Context, t string) (service.Identitas, e
 type fakeAnggota struct {
 	diterima []service.DaftarAnggotaInput
 	galat    error
+
+	hasilFilter service.PaginatedAnggotaResponse
+	errFilter   error
+
+	cariFilter   string
+	statusFilter string
+	pageFilter   int
+	limitFilter  int
 }
 
 func (f *fakeAnggota) Register(_ context.Context, in service.DaftarAnggotaInput) (int64, error) {
@@ -51,9 +59,24 @@ func (f *fakeAnggota) Register(_ context.Context, in service.DaftarAnggotaInput)
 	f.diterima = append(f.diterima, in)
 	return 1, nil
 }
-func (*fakeAnggota) Semua(context.Context) ([]model.Anggota, error) {
+func (*fakeAnggota) GetAll(context.Context) ([]model.Anggota, error) {
 	return []model.Anggota{{NomorAnggota: "A-001", NamaLengkap: "Siti <b>Aminah</b>", TanggalBergabung: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), Status: "aktif"}}, nil
 }
+
+func (f *fakeAnggota) GetListFiltered(
+	_ context.Context,
+	cari, status string,
+	page, limit int,
+) (service.PaginatedAnggotaResponse, error) {
+
+	f.cariFilter = cari
+	f.statusFilter = status
+	f.pageFilter = page
+	f.limitFilter = limit
+
+	return f.hasilFilter, f.errFilter
+}
+
 func (*fakeAnggota) FormatTanggal() time.Time { return time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC) }
 
 func siap(t *testing.T) (http.Handler, *fakeAuth, *fakeAnggota) {
@@ -191,5 +214,45 @@ func TestLogout(t *testing.T) {
 	cs := w.Result().Cookies()
 	if len(cs) != 1 || cs[0].MaxAge >= 0 {
 		t.Errorf("cookie harus dihapus: %+v", cs)
+	}
+}
+
+func TestListFilteredAnggota(t *testing.T) {
+	h, _, ang := siap(t)
+
+	ang.hasilFilter = service.PaginatedAnggotaResponse{
+		Data: []model.Anggota{
+			{
+				NomorAnggota: "A-001",
+				NamaLengkap:  "Siti Aminah",
+				Status:       "aktif",
+			},
+		},
+		Total:    1,
+		Page:     1,
+		PageSize: 10,
+	}
+
+	w := kirim(
+		h,
+		http.MethodGet,
+		"/anggota?q=A-001&status=aktif&page=1&limit=10",
+		nil,
+		"token-ani",
+	)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+	}
+
+	if !strings.Contains(w.Body.String(), "Siti Aminah") {
+		t.Error("halaman harus menampilkan Siti Aminah")
+	}
+
+	if ang.cariFilter != "A-001" ||
+		ang.statusFilter != "aktif" ||
+		ang.pageFilter != 1 ||
+		ang.limitFilter != 10 {
+		t.Errorf("parameter filter tidak diteruskan dengan benar")
 	}
 }

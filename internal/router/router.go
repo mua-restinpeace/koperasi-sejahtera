@@ -52,7 +52,7 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("POST /logout", h.Logout)
 
 	// Anggota
-	r.Protected("GET /anggota", r.h.ListAnggota)
+	r.Protected("GET /anggota", r.h.GetListFiltered)
 	r.Protected("GET /anggota/baru", r.h.FormAnggota)
 	r.Protected("POST /anggota", r.h.SimpanAnggota)
 

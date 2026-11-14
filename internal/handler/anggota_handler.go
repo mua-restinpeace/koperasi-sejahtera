@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/model"
@@ -12,6 +14,8 @@ import (
 
 type AnggotaService interface {
 	Register(ctx context.Context, in service.DaftarAnggotaInput) (int64, error)
+	GetAll(ctx context.Context) ([]model.Anggota, error)
+	GetListFiltered(ctx context.Context, cari, status string, page, limit int) (service.PaginatedAnggotaResponse, error)
 	FormatTanggal() time.Time
 }
 
@@ -19,6 +23,7 @@ type dataListAnggota struct {
 	Anggota      []model.Anggota
 	Cari         string
 	FilterStatus string
+	Limit        int
 
 	Total  int
 	Mulai  int
@@ -38,16 +43,121 @@ type dataFormAnggota struct {
 	Error map[string]string
 }
 
-// ListAnggota menampilkan seluruh anggota
-func (h *Handler) ListAnggota(w http.ResponseWriter, r *http.Request) {
+// GetList menampilkan seluruh anggota
+func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	anggotaList, err := h.svc.Anggota.GetAll(r.Context())
+	if err != nil {
+		h.error(w, r, err)
+		return
+	}
+
 	hal := h.halaman(r, "Anggota", "anggota")
 	if r.URL.Query().Get("berhasil") == "1" {
 		hal.Pesan = "Anggota berhasil didaftarkan"
 	}
 	h.render(w, http.StatusOK, "pages/anggota.html", dataListAnggota{
 		Halaman: hal,
-		Anggota: nil,
+		Anggota: anggotaList,
 	})
+}
+
+// GetListFiltered menampilkan seluruh anggota yang difilter
+func (h *Handler) GetListFiltered(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	cari := strings.TrimSpace(q.Get("q"))
+	status := q.Get("status")
+
+	// default value untuk pagination
+	pageStr := q.Get("page")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+
+	limitStr := q.Get("limit")
+	limit, _ := strconv.Atoi(limitStr)
+	if limit < 1 {
+		limit = 10
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	res, err := h.svc.Anggota.GetListFiltered(r.Context(), cari, status, page, limit)
+	if err != nil {
+		h.error(w, r, err)
+		return
+	}
+
+	hal := h.halaman(r, "Anggota", "anggota")
+	if q.Get("berhasil") == "1" {
+		hal.Pesan = "Anggota Berhasil didaftarkan"
+	}
+
+	// menghitung total halaman page
+	totalHalaman := (res.Total + limit - 1) / limit
+
+	mulai, sampai := 0, 0
+	if len(res.Data) > 0 {
+		mulai = (page-1)*limit + 1
+		sampai = mulai + len(res.Data) - 1
+	}
+
+	halamanPrev := page - 1
+	if halamanPrev < 1 {
+		halamanPrev = 1
+	}
+
+	halamanNext := page + 1
+	if totalHalaman == 0 {
+		halamanNext = 1
+	} else if halamanNext > totalHalaman {
+		halamanNext = totalHalaman
+	}
+
+	h.render(w, http.StatusOK, "pages/anggota.html", dataListAnggota{
+		Anggota:      res.Data,
+		Cari:         cari,
+		FilterStatus: status,
+		Limit:        limit,
+
+		Total:  res.Total,
+		Mulai:  mulai,
+		Sampai: sampai,
+
+		Halaman:        hal,
+		CurrentHalaman: page,
+		HalamanPrev:    halamanPrev,
+		HalamanNext:    halamanNext,
+		TotalHalaman:   totalHalaman,
+		NomorHalaman:   buatNomorHalaman(page, totalHalaman),
+	})
+}
+
+func buatNomorHalaman(current, total int) []int {
+	if total == 0 {
+		return nil
+	}
+
+	awal := current - 2
+	akhir := current + 2
+
+	if awal < 1 {
+		awal = 1
+	}
+
+	if akhir > total {
+		akhir = total
+	}
+
+	nomor := make([]int, 0, akhir-awal+1)
+
+	for i := awal; i <= akhir; i++ {
+		nomor = append(nomor, i)
+	}
+
+	return nomor
 }
 
 // FormAnggota menampilkan form pendaftaran anggota baru

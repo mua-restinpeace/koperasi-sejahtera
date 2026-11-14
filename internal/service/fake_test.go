@@ -122,6 +122,15 @@ func (f *fakeAudit) Create(_ context.Context, _ database.DBTX, e model.Audit) er
 type fakeAnggota struct {
 	dibuat []model.Anggota
 	nomor  map[string]bool
+
+	hasilFilter []model.Anggota
+	totalFilter int
+	errFilter   error
+
+	cariFilter   string
+	statusFilter string
+	pageFilter   int
+	limitFilter  int
 }
 
 func (f *fakeAnggota) Create(_ context.Context, _ database.DBTX, a model.Anggota) (int64, error) {
@@ -136,7 +145,22 @@ func (f *fakeAnggota) Create(_ context.Context, _ database.DBTX, a model.Anggota
 	return int64(len(f.dibuat)), nil
 }
 
-func (f *fakeAnggota) Daftar(context.Context, database.DBTX) ([]model.Anggota, error) {
+func (f *fakeAnggota) ListFiltered(
+	ctx context.Context,
+	db database.DBTX,
+	cari, status string,
+	page, limit int,
+) ([]model.Anggota, int, error) {
+
+	f.cariFilter = cari
+	f.statusFilter = status
+	f.pageFilter = page
+	f.limitFilter = limit
+
+	return f.hasilFilter, f.totalFilter, f.errFilter
+}
+
+func (f *fakeAnggota) GetAll(context.Context, database.DBTX) ([]model.Anggota, error) {
 	return f.dibuat, nil
 }
 

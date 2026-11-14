@@ -15,10 +15,19 @@ import (
 
 type AnggotaRepo interface {
 	Create(ctx context.Context, db database.DBTX, a model.Anggota) (int64, error)
+	GetAll(ctx context.Context, db database.DBTX) ([]model.Anggota, error)
+	ListFiltered(ctx context.Context, db database.DBTX, cari, status string, page, limit int) ([]model.Anggota, int, error)
 }
 
 type SimpananRepo interface {
 	Create(ctx context.Context, db database.DBTX, t model.TransaksiSimpanan) (int64, error)
+}
+
+type PaginatedAnggotaResponse struct {
+	Data     []model.Anggota
+	Total    int
+	Page     int
+	PageSize int
 }
 
 type AnggotaService struct {
@@ -112,6 +121,35 @@ func (s *AnggotaService) Register(ctx context.Context, in DaftarAnggotaInput) (i
 		return 0, fmt.Errorf("register anggota: %w", err)
 	}
 	return idAnggota, nil
+}
+
+// GetAll mengembalikan seluruh anggota
+func (s *AnggotaService) GetAll(ctx context.Context) ([]model.Anggota, error) {
+	if _, ok := IdentitasDari(ctx); !ok {
+		return nil, ErrBelumLogin
+	}
+
+	hasil, err := s.anggotaRepo.GetAll(ctx, s.db)
+	if err != nil {
+		return nil, fmt.Errorf("GetAll anggota: %w", err)
+	}
+
+	return hasil, nil
+}
+
+// GetListFiltered mengembalikan daftar anggota yand difilter
+func (s *AnggotaService) GetListFiltered(ctx context.Context, cari, status string, page, limit int) (PaginatedAnggotaResponse, error) {
+	listAnggota, total, err := s.anggotaRepo.ListFiltered(ctx, s.db, cari, status, page, limit)
+	if err != nil {
+		return PaginatedAnggotaResponse{}, err
+	}
+
+	return PaginatedAnggotaResponse{
+		Data:     listAnggota,
+		Total:    total,
+		Page:     page,
+		PageSize: limit,
+	}, err
 }
 
 // HELPER //

@@ -124,3 +124,145 @@ func TestAnggota_TanggalHariIniBolehDanBelumLogin(t *testing.T) {
 		t.Errorf("tanpa login: err = %v", err)
 	}
 }
+
+func TestAnggota_GetListFilteredBerhasil(t *testing.T) {
+	s, _, ag, _, _ := siapAnggota()
+
+	expected := []model.Anggota{
+		{
+			ID:           1,
+			NomorAnggota: "A-001",
+			NamaLengkap:  "Siti Aminah",
+		},
+		{
+			ID:           2,
+			NomorAnggota: "A-002",
+			NamaLengkap:  "Budi Santoso",
+		},
+	}
+
+	ag.hasilFilter = expected
+	ag.totalFilter = 15
+
+	result, err := s.GetListFiltered(
+		ctxLogin(),
+		"A-00",
+		"aktif",
+		2,
+		10,
+	)
+
+	if err != nil {
+		t.Fatalf("GetListFiltered() error = %v", err)
+	}
+
+	if len(result.Data) != len(expected) {
+		t.Fatalf("jumlah data = %d, want %d", len(result.Data), len(expected))
+	}
+
+	if result.Total != 15 {
+		t.Errorf("Total = %d, want 15", result.Total)
+	}
+
+	if result.Page != 2 {
+		t.Errorf("Page = %d, want 2", result.Page)
+	}
+
+	if result.PageSize != 10 {
+		t.Errorf("PageSize = %d, want 10", result.PageSize)
+	}
+
+	for i, anggota := range expected {
+		if result.Data[i].NomorAnggota != anggota.NomorAnggota {
+			t.Errorf(
+				"Data[%d].NomorAnggota = %q, want %q",
+				i,
+				result.Data[i].NomorAnggota,
+				anggota.NomorAnggota,
+			)
+		}
+	}
+
+	// Pastikan semua parameter diteruskan ke repository.
+	if ag.cariFilter != "A-00" {
+		t.Errorf("cari = %q, want A-00", ag.cariFilter)
+	}
+
+	if ag.statusFilter != "aktif" {
+		t.Errorf("status = %q, want aktif", ag.statusFilter)
+	}
+
+	if ag.pageFilter != 2 {
+		t.Errorf("page = %d, want 2", ag.pageFilter)
+	}
+
+	if ag.limitFilter != 10 {
+		t.Errorf("limit = %d, want 10", ag.limitFilter)
+	}
+}
+
+func TestAnggota_GetListFilteredKosong(t *testing.T) {
+	s, _, ag, _, _ := siapAnggota()
+
+	ag.hasilFilter = []model.Anggota{}
+	ag.totalFilter = 0
+
+	result, err := s.GetListFiltered(
+		ctxLogin(),
+		"",
+		"",
+		1,
+		10,
+	)
+
+	if err != nil {
+		t.Fatalf("GetListFiltered() error = %v", err)
+	}
+
+	if len(result.Data) != 0 {
+		t.Errorf("jumlah data = %d, want 0", len(result.Data))
+	}
+
+	if result.Total != 0 {
+		t.Errorf("Total = %d, want 0", result.Total)
+	}
+
+	if result.Page != 1 {
+		t.Errorf("Page = %d, want 1", result.Page)
+	}
+
+	if result.PageSize != 10 {
+		t.Errorf("PageSize = %d, want 10", result.PageSize)
+	}
+}
+
+func TestAnggota_GetListFilteredRepositoryGagal(t *testing.T) {
+	s, _, ag, _, _ := siapAnggota()
+
+	expectedErr := errors.New("database connection failed")
+	ag.errFilter = expectedErr
+
+	result, err := s.GetListFiltered(
+		ctxLogin(),
+		"A-001",
+		"aktif",
+		1,
+		10,
+	)
+
+	if err == nil {
+		t.Fatal("GetListFiltered() seharusnya mengembalikan error")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("error = %v, want %v", err, expectedErr)
+	}
+
+	if len(result.Data) != 0 {
+		t.Errorf("Data seharusnya kosong ketika repository gagal")
+	}
+
+	if result.Total != 0 {
+		t.Errorf("Total = %d, want 0", result.Total)
+	}
+}
