@@ -23,3 +23,16 @@ type TransaksiSimpanan struct {
 	Keterangan       string
 	DibuatOleh       int64
 }
+
+// SaldoSimpanan adalah saldo simpanan satu anggota per kategori
+// setoran dikurangi penarikan, tidak termasuk transaksi yang sudah dibatalkan
+type SaldoSimpanan struct {
+	Pokok    int64
+	Wajib    int64
+	Sukarela int64
+}
+
+// Total adalah jumlah saldo ketiga kategori
+func (s SaldoSimpanan) Total() int64 {
+	return s.Pokok + s.Wajib + s.Sukarela
+}

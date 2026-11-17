@@ -1,7 +1,7 @@
 # Panduan Kontribusi
 
 Dokumen ini singkat dan sengaja tegas, supaya kode dari lima orang tetap seragam.
-Baca juga `README.md` (struktur proyek), `docs/spec-perhitungan.md` (aturan hitung),
+Baca juga `docs/spec-perhitungan.md` (aturan hitung),
 dan PRD (kebutuhan F-1 sampai F-27 dan L-1 sampai L-4).
 
 ## 1. Menyiapkan lingkungan
@@ -47,7 +47,7 @@ lewat PR kecil tersendiri yang disetujui ketua tim.
    hasil. Semua aturan (batas pinjaman, denda, validasi) ada di `service`.
 2. **Uang selalu `int64` rupiah.** Dilarang memakai `float32` atau `float64` untuk uang.
 3. **Tanggal bisnis memakai tanggal saja** (zona waktu Asia/Jakarta), terpisah dari waktu pencatatan.
-4. **Fungsi perhitungan murni** (di `service`) tidak boleh mengimpor `database/sql` atau `repository`,
+4. **Fungsi perhitungan murni** (di `helper`) tidak boleh mengimpor `database/sql` atau `repository`,
    dan tidak boleh memanggil `time.Now()`. Tanggal "hari ini" diberikan sebagai argumen.
 5. **Transaksi tidak dihapus.** Koreksi dilakukan dengan membatalkan lalu memasukkan ulang
    (lihat PRD 4.6). Jangan menulis `DELETE` atau `UPDATE` atas nominal.

@@ -57,7 +57,7 @@ func run(log *slog.Logger) error {
 	// service menerima keduanya lewat interface
 	auditSvc := service.NewAuditService(repository.AuditRepo{})
 	authService := service.NewAuthService(sumber, repository.PenggunaRepo{}, repository.SesiRepo{}, service.HasherPBKDF2{}, time.Duration(cfg.SesiJam)*time.Hour, nil, log)
-	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
+	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, repository.PinjamanRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
 
 	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
 		Auth:    authService,

@@ -30,30 +30,6 @@ func (AnggotaRepo) Create(ctx context.Context, db database.DBTX, a model.Anggota
 	return id, petakanError(err, "id anggota")
 }
 
-// GetAll mengembalikan semua anggota
-func (AnggotaRepo) GetAll(ctx context.Context, db database.DBTX) ([]model.Anggota, error) {
-	query := `SELECT id, nomor_anggota, nama_lengkap, no_telepon, tanggal_bergabung, status, tanggal_keluar
-	FROM anggota ORDER BY nomor_anggota`
-
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, petakanError(err, "GetAll anggota")
-	}
-	defer rows.Close()
-
-	var hasil []model.Anggota
-	for rows.Next() {
-		a, _, err := scan(rows)
-		if err != nil {
-			return nil, petakanError(err, "scan anggota")
-		}
-
-		hasil = append(hasil, a)
-	}
-
-	return hasil, petakanError(rows.Err(), "GetAll anggota")
-}
-
 type filterClause struct {
 	sql   string
 	value interface{}
@@ -96,29 +72,72 @@ func (AnggotaRepo) ListFiltered(ctx context.Context, db database.DBTX, cari, sta
 
 	var total int
 	for rows.Next() {
-		a, d, err := scan(rows)
+		a, err := scanAnggota(rows, &total)
 		if err != nil {
 			return nil, 0, petakanError(err, "scan anggota")
 		}
 
-		total = d
 		listAnggota = append(listAnggota, a)
 	}
 
-	return listAnggota, total, rows.Err()
+	return listAnggota, total, petakanError(rows.Err(), "ListFiltered anggota")
+}
+
+// GetByID mengambil satu anggota
+func (AnggotaRepo) GetByID(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error) {
+	query := `SELECT id, nomor_anggota, nama_lengkap, no_telepon, tanggal_bergabung, status, tanggal_keluar FROM anggota
+	WHERE id = ?`
+	return scanOne(ctx, db, query, id, "GetByID anggota")
+}
+
+// GetByIDForUpdate sama dengan GetByID, tetapi baris anggota dikunci sampai
+// transaksi selesai (SELECT ... FOR UPDATE). Hanya bermakna bila db adalah
+// transaksi; dipakai sebelum mengubah anggota atau datanya supaya dua pengurus
+// tidak saling menimpa.
+func (AnggotaRepo) GetByIDForUpdate(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error) {
+	return scanOne(ctx, db, `SELECT id, nomor_anggota, nama_lengkap, no_telepon, tanggal_bergabung, status, tanggal_keluar FROM anggota WHERE id = ? FOR UPDATE`, id, "GetByIDForUpdate anggota")
+}
+
+// Update hanya dapat mengubah nama dan telepon.
+func (AnggotaRepo) Update(ctx context.Context, db database.DBTX, id int64, nama, telepon string) error {
+	query := `UPDATE anggota set nama_lengkap = ?, no_telepon = ? WHERE id = ?`
+
+	_, err := db.ExecContext(ctx, query, nama, nullBilaKosong(telepon), id)
+	return petakanError(err, "Update anggota")
 }
 
 // HELPER //
-func scan(rows *sql.Rows) (model.Anggota, int, error) {
+// pemindai adalah bagian dari *sql.Row dan *sql.Rows yang dipakai untuk membaca satu baris.
+type pemindai interface {
+	Scan(dest ...any) error
+}
+
+// bacaSatu menjalankan query yang menerima satu parameter ID dan membaca satu anggota.
+func scanOne(ctx context.Context, db database.DBTX, query string, id int64, konteks string) (model.Anggota, error) {
+	a, err := scanAnggota(db.QueryRowContext(ctx, query, id), nil)
+	if err != nil {
+		return model.Anggota{}, petakanError(err, konteks)
+	}
+
+	return a, nil
+}
+
+// scanAnggota membaca satu baris anggota (kolom sesuai kolomAnggota). Bila total tidak nil,
+// kolom tambahan COUNT(*) OVER() di ujung baris ikut dibaca ke sana.
+func scanAnggota(p pemindai, total *int) (model.Anggota, error) {
 	var (
 		a       model.Anggota
 		telepon sql.NullString
 		keluar  sql.NullTime
-		total   int
 	)
 
-	if err := rows.Scan(&a.ID, &a.NomorAnggota, &a.NamaLengkap, &telepon, &a.TanggalBergabung, &a.Status, &keluar, &total); err != nil {
-		return model.Anggota{}, 0, err
+	dest := []any{&a.ID, &a.NomorAnggota, &a.NamaLengkap, &telepon, &a.TanggalBergabung, &a.Status, &keluar}
+	if total != nil {
+		dest = append(dest, total)
+	}
+
+	if err := p.Scan(dest...); err != nil {
+		return model.Anggota{}, err
 	}
 
 	a.NoTelepon = telepon.String
@@ -127,5 +146,14 @@ func scan(rows *sql.Rows) (model.Anggota, int, error) {
 		a.TanggalKeluar = &t
 	}
 
-	return a, total, nil
+	return a, nil
+}
+
+// nullBilaKosong mengubah string kosong menjadi NULL untuk kolom yang boleh NULL.
+func nullBilaKosong(s string) any {
+	if s == "" {
+		return nil
+	}
+
+	return s
 }
