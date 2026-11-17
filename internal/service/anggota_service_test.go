@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,15 +11,21 @@ import (
 )
 
 func siapAnggota() (*AnggotaService, *fakeDB, *fakeAnggota, *fakeSimpanan, *fakeAudit) {
+	s, db, ag, sp, au, _ := siapAnggotaLengkap()
+	return s, db, ag, sp, au
+}
+
+// siapAnggotaLengkap sama dengan siapAnggota, ditambah tiruan cek pinjaman aktif.
+func siapAnggotaLengkap() (*AnggotaService, *fakeDB, *fakeAnggota, *fakeSimpanan, *fakeAudit, *fakePinjamanAktif) {
 	db := &fakeDB{}
-	ag, sp, au := &fakeAnggota{}, &fakeSimpanan{}, &fakeAudit{}
+	ag, sp, au, pj := &fakeAnggota{}, &fakeSimpanan{}, &fakeAudit{}, &fakePinjamanAktif{}
 	// 2026-11-10 20:00 UTC = 11 November 03:00 WIB: tanggal bisnis harus 11 November.
 	now := func() time.Time { return time.Date(2026, 11, 10, 20, 0, 0, 0, time.UTC) }
 	jkt, _ := time.LoadLocation("Asia/Jakarta")
 	if jkt == nil {
 		jkt = time.FixedZone("WIB", 7*3600)
 	}
-	return NewAnggotaService(db, ag, sp, NewAuditService(au), 500_000, jkt, now), db, ag, sp, au
+	return NewAnggotaService(db, ag, sp, pj, NewAuditService(au), 500_000, jkt, now), db, ag, sp, au, pj
 }
 
 func ctxLogin() context.Context {
@@ -265,4 +272,163 @@ func TestAnggota_GetListFilteredRepositoryGagal(t *testing.T) {
 	if result.Total != 0 {
 		t.Errorf("Total = %d, want 0", result.Total)
 	}
+}
+
+func TestAnggota_GetListFilteredButuhLogin(t *testing.T) {
+	s, _, _, _, _ := siapAnggota()
+
+	if _, err := s.GetListFiltered(context.Background(), "", "", 1, 10); !errors.Is(err, ErrBelumLogin) {
+		t.Errorf("tanpa login: err = %v, want ErrBelumLogin", err)
+	}
+}
+
+// anggotaUji adalah anggota aktif dengan ID 5 yang dipakai tes detail, ubah, dan keluar.
+func anggotaUji() model.Anggota {
+	return model.Anggota{
+		ID:               5,
+		NomorAnggota:     "A-005",
+		NamaLengkap:      "Siti Aminah",
+		NoTelepon:        "0812",
+		TanggalBergabung: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC),
+		Status:           model.StatusAnggotaAktif,
+	}
+}
+
+func TestAnggota_Detail(t *testing.T) {
+	t.Run("berhasil", func(t *testing.T) {
+		s, _, ag, sp, _, pj := siapAnggotaLengkap()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000, Wajib: 1_200_000, Sukarela: 250_000}
+		pj.aktif = true
+
+		d, err := s.GetAnggota(ctxLogin(), 5)
+		if err != nil {
+			t.Fatalf("GetAnggota: %v", err)
+		}
+		if d.Anggota.NomorAnggota != "A-005" || d.Saldo.Total() != 1_950_000 || !d.PinjamanAktif {
+			t.Errorf("GetAnggota = %+v", d)
+		}
+	})
+
+	t.Run("anggota tidak ada", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if _, err := s.GetAnggota(ctxLogin(), 99); !errors.Is(err, ErrAnggotaTidakDitemukan) {
+			t.Errorf("err = %v, want ErrAnggotaTidakDitemukan", err)
+		}
+	})
+
+	t.Run("butuh login", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if _, err := s.GetAnggota(context.Background(), 5); !errors.Is(err, ErrBelumLogin) {
+			t.Errorf("err = %v, want ErrBelumLogin", err)
+		}
+		if _, err := s.GetByID(context.Background(), 5); !errors.Is(err, ErrBelumLogin) {
+			t.Errorf("GetByID: err = %v, want ErrBelumLogin", err)
+		}
+	})
+}
+
+func TestAnggota_Update(t *testing.T) {
+	t.Run("berhasil: tersimpan, baris dikunci, audit mencatat sebelum dan sesudah", func(t *testing.T) {
+		s, db, ag, _, au := siapAnggota()
+		ag.tambah(anggotaUji())
+
+		err := s.Update(ctxLogin(), 5, UpdateAnggotaInput{NamaLengkap: "  Siti Aminah Putri ", NoTelepon: "0813"})
+		if err != nil {
+			t.Fatalf("Update: %v", err)
+		}
+		if len(ag.ubah) != 1 || ag.ubah[0] != (ubahProfil{5, "Siti Aminah Putri", "0813"}) {
+			t.Errorf("ubah = %+v", ag.ubah)
+		}
+		if ag.kunci != 1 || db.tx != 1 || db.rollback != 0 {
+			t.Errorf("kunci=%d tx=%d rollback=%d; baris harus dikunci dalam satu transaksi", ag.kunci, db.tx, db.rollback)
+		}
+		if len(au.entri) != 1 || au.entri[0].Aksi != "ubah_anggota" || au.entri[0].IDEntitas != 5 || au.entri[0].IDPengguna != 7 {
+			t.Fatalf("audit = %+v", au.entri)
+		}
+		detail := string(au.entri[0].Detail)
+		for _, want := range []string{`"dari":"Siti Aminah"`, `"menjadi":"Siti Aminah Putri"`, `"dari":"0812"`, `"menjadi":"0813"`} {
+			if !strings.Contains(detail, want) {
+				t.Errorf("detail audit %s tidak memuat %s", detail, want)
+			}
+		}
+	})
+
+	t.Run("hanya kolom yang berubah dicatat di audit", func(t *testing.T) {
+		s, _, ag, _, au := siapAnggota()
+		ag.tambah(anggotaUji())
+
+		if err := s.Update(ctxLogin(), 5, UpdateAnggotaInput{NamaLengkap: "Siti Aminah", NoTelepon: ""}); err != nil {
+			t.Fatal(err)
+		}
+		detail := string(au.entri[0].Detail)
+		if strings.Contains(detail, "nama_lengkap") || !strings.Contains(detail, "no_telepon") {
+			t.Errorf("detail audit = %s; hanya no_telepon yang berubah", detail)
+		}
+	})
+
+	t.Run("tidak ada perubahan: tidak menulis apa pun", func(t *testing.T) {
+		s, _, ag, _, au := siapAnggota()
+		ag.tambah(anggotaUji())
+
+		if err := s.Update(ctxLogin(), 5, UpdateAnggotaInput{NamaLengkap: " Siti Aminah ", NoTelepon: "0812"}); err != nil {
+			t.Fatal(err)
+		}
+		if len(ag.ubah) != 0 || len(au.entri) != 0 {
+			t.Errorf("ubah=%d audit=%d, want 0 dan 0", len(ag.ubah), len(au.entri))
+		}
+	})
+
+	t.Run("validasi gagal: tidak membuka transaksi", func(t *testing.T) {
+		tests := []struct {
+			nama  string
+			in    UpdateAnggotaInput
+			kolom string
+		}{
+			{"nama kosong", UpdateAnggotaInput{NamaLengkap: "  "}, "nama_lengkap"},
+			{"nama terlalu panjang", UpdateAnggotaInput{NamaLengkap: strings.Repeat("x", 101)}, "nama_lengkap"},
+			{"telepon terlalu panjang", UpdateAnggotaInput{NamaLengkap: "A", NoTelepon: strings.Repeat("1", 21)}, "no_telepon"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.nama, func(t *testing.T) {
+				s, db, ag, _, _ := siapAnggota()
+				ag.tambah(anggotaUji())
+
+				err := s.Update(ctxLogin(), 5, tt.in)
+				var ve *ValidasiError
+				if !errors.As(err, &ve) || ve.Pesan[tt.kolom] == "" {
+					t.Fatalf("err = %v, want ValidasiError kolom %q", err, tt.kolom)
+				}
+				if db.tx != 0 {
+					t.Error("validasi gagal tidak boleh membuka transaksi")
+				}
+			})
+		}
+	})
+
+	t.Run("anggota tidak ada", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		err := s.Update(ctxLogin(), 99, UpdateAnggotaInput{NamaLengkap: "A"})
+		if !errors.Is(err, ErrAnggotaTidakDitemukan) {
+			t.Errorf("err = %v, want ErrAnggotaTidakDitemukan", err)
+		}
+	})
+
+	t.Run("audit gagal membatalkan transaksi", func(t *testing.T) {
+		s, db, ag, _, au := siapAnggota()
+		ag.tambah(anggotaUji())
+		au.err = errors.New("disk penuh")
+
+		err := s.Update(ctxLogin(), 5, UpdateAnggotaInput{NamaLengkap: "Nama Baru"})
+		if err == nil || db.rollback != 1 {
+			t.Errorf("err=%v rollback=%d; audit gagal harus membatalkan transaksi", err, db.rollback)
+		}
+	})
+
+	t.Run("butuh login", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if err := s.Update(context.Background(), 5, UpdateAnggotaInput{NamaLengkap: "A"}); !errors.Is(err, ErrBelumLogin) {
+			t.Errorf("err = %v, want ErrBelumLogin", err)
+		}
+	})
 }

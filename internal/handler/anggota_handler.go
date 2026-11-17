@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,8 +15,10 @@ import (
 
 type AnggotaService interface {
 	Register(ctx context.Context, in service.DaftarAnggotaInput) (int64, error)
-	GetAll(ctx context.Context) ([]model.Anggota, error)
+	GetAnggota(ctx context.Context, id int64) (service.GetAnggota, error)
 	GetListFiltered(ctx context.Context, cari, status string, page, limit int) (service.PaginatedAnggotaResponse, error)
+	GetByID(ctx context.Context, id int64) (model.Anggota, error)
+	Update(ctx context.Context, id int64, in service.UpdateAnggotaInput) error
 	FormatTanggal() time.Time
 }
 
@@ -37,28 +40,72 @@ type dataListAnggota struct {
 	NomorHalaman   []int
 }
 
+type dataDetailAnggota struct {
+	Halaman
+	service.GetAnggota
+}
+
 type dataFormAnggota struct {
 	Halaman
 	Isian service.DaftarAnggotaInput
 	Error map[string]string
 }
 
-// GetList menampilkan seluruh anggota
-func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
-	anggotaList, err := h.svc.Anggota.GetAll(r.Context())
-	if err != nil {
-		h.error(w, r, err)
+type dataFormUpdateAnggota struct {
+	Halaman
+	Anggota model.Anggota // nomor anggota ditampilkan tetapi tidak dapat diubah
+	Isian   service.UpdateAnggotaInput
+	Error   map[string]string
+}
+
+// successMessage menerjemahkan query ?berhasil=.. pada URL menjadi pesan
+func successMessage(kode string) string {
+	switch kode {
+	case "1":
+		return "Anggota berhasil didaftarkan"
+	case "ubah":
+		return "Data anggota berhasil diubah"
+	case "keluar":
+		return "Anggota berhasil dikeluarkan dan simpanannya dicatat sebagai dikembalikan"
+	default:
+		return ""
+	}
+}
+
+// idDariPath membaca {id} dari URL; ok=false bila bukan bilangan bulat positif.
+func idDariPath(r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	return id, err == nil && id > 0
+}
+
+func urlDetailAnggota(id int64, berhasil string) string {
+	u := fmt.Sprintf("/anggota/%d", id)
+	if berhasil != "" {
+		u += "?berhasil=" + berhasil
+	}
+
+	return u
+}
+
+// DetailAnggota menampilkan profil, saldo simpanan, dan tombol aksi satu anggota
+func (h *Handler) DetailAnggota(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
 		return
 	}
 
-	hal := h.halaman(r, "Anggota", "anggota")
-	if r.URL.Query().Get("berhasil") == "1" {
-		hal.Pesan = "Anggota berhasil didaftarkan"
+	d, err := h.svc.Anggota.GetAnggota(r.Context(), id)
+	switch {
+	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
+		h.notFound(w)
+	case err != nil:
+		h.error(w, r, err)
+	default:
+		hal := h.halaman(r, "Detail Anggota", "anggota")
+		hal.Pesan = successMessage(r.URL.Query().Get("berhasil"))
+		h.render(w, http.StatusOK, "pages/anggota_detail.html", dataDetailAnggota{Halaman: hal, GetAnggota: d})
 	}
-	h.render(w, http.StatusOK, "pages/anggota.html", dataListAnggota{
-		Halaman: hal,
-		Anggota: anggotaList,
-	})
 }
 
 // GetListFiltered menampilkan seluruh anggota yang difilter
@@ -92,7 +139,7 @@ func (h *Handler) GetListFiltered(w http.ResponseWriter, r *http.Request) {
 
 	hal := h.halaman(r, "Anggota", "anggota")
 	if q.Get("berhasil") == "1" {
-		hal.Pesan = "Anggota Berhasil didaftarkan"
+		hal.Pesan = successMessage(q.Get("berhasil"))
 	}
 
 	// menghitung total halaman page
@@ -193,5 +240,68 @@ func (h *Handler) SimpanAnggota(w http.ResponseWriter, r *http.Request) {
 		h.error(w, r, err)
 	default:
 		http.Redirect(w, r, "/anggota?berhasil=1", http.StatusSeeOther)
+	}
+}
+
+// FormUpdate menampilkan form ubah data anggota
+func (h *Handler) FormUpdate(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
+		return
+	}
+
+	a, err := h.svc.Anggota.GetByID(r.Context(), id)
+	switch {
+	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
+		h.notFound(w)
+	case err != nil:
+		h.error(w, r, err)
+	default:
+		h.render(w, http.StatusOK, "pages/anggota_update.html",
+			dataFormUpdateAnggota{
+				Halaman: h.halaman(r, "Update Anggota", "anggota"),
+				Anggota: a,
+				Isian:   service.UpdateAnggotaInput{NamaLengkap: a.NamaLengkap, NoTelepon: a.NoTelepon},
+			})
+	}
+}
+
+// SaveUpdateAnggota memproses form update data
+func (h *Handler) SaveUpdateAnggota(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
+		return
+	}
+
+	in := service.UpdateAnggotaInput{
+		NamaLengkap: r.PostFormValue("nama_lengkap"),
+		NoTelepon:   r.PostFormValue("no_telepon"),
+	}
+
+	err := h.svc.Anggota.Update(r.Context(), id, in)
+	var ve *service.ValidasiError
+	switch {
+	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
+		h.notFound(w)
+	case errors.As(err, &ve):
+		a, errCari := h.svc.Anggota.GetByID(r.Context(), id) // untuk menampilkan nomor anggota
+		if errCari != nil {
+			h.error(w, r, errCari)
+			return
+		}
+
+		h.render(w, http.StatusUnprocessableEntity, "pages/anggota_update.html",
+			dataFormUpdateAnggota{
+				Halaman: h.halaman(r, "Update Anggota", "anggota"),
+				Anggota: a,
+				Isian:   in,
+				Error:   ve.Pesan,
+			})
+	case err != nil:
+		h.error(w, r, err)
+	default:
+		http.Redirect(w, r, urlDetailAnggota(id, "ubah"), http.StatusSeeOther)
 	}
 }

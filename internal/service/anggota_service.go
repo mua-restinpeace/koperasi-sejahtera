@@ -15,12 +15,19 @@ import (
 
 type AnggotaRepo interface {
 	Create(ctx context.Context, db database.DBTX, a model.Anggota) (int64, error)
-	GetAll(ctx context.Context, db database.DBTX) ([]model.Anggota, error)
 	ListFiltered(ctx context.Context, db database.DBTX, cari, status string, page, limit int) ([]model.Anggota, int, error)
+	GetByID(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error)
+	GetByIDForUpdate(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error)
+	Update(ctx context.Context, db database.DBTX, id int64, nama, telepon string) error
 }
 
 type SimpananRepo interface {
 	Create(ctx context.Context, db database.DBTX, t model.TransaksiSimpanan) (int64, error)
+	Saldo(ctx context.Context, db database.DBTX, idAnggota int64) (model.SaldoSimpanan, error)
+}
+
+type PinjamanRepo interface {
+	AdaAktif(ctx context.Context, db database.DBTX, idAnggota int64) (bool, error)
 }
 
 type PaginatedAnggotaResponse struct {
@@ -34,13 +41,26 @@ type AnggotaService struct {
 	db            database.Sumber
 	anggotaRepo   AnggotaRepo
 	simpananRepo  SimpananRepo
+	pinjamanRepo  PinjamanRepo
 	auditSvc      *AuditService
 	simpananPokok int64
 	now           func() time.Time
 	zona          *time.Location
 }
 
-func NewAnggotaService(db database.Sumber, anggotaRepo AnggotaRepo, simpananRepo SimpananRepo, auditSvc *AuditService, simpananPokok int64, zona *time.Location, now func() time.Time) *AnggotaService {
+// UpdateAnggotaInput adalah isian form update data anggota. nomor angota dan tanggal bergabung tidak dapat diubah
+type UpdateAnggotaInput struct {
+	NamaLengkap string
+	NoTelepon   string
+}
+
+type GetAnggota struct {
+	Anggota       model.Anggota
+	Saldo         model.SaldoSimpanan
+	PinjamanAktif bool
+}
+
+func NewAnggotaService(db database.Sumber, anggotaRepo AnggotaRepo, simpananRepo SimpananRepo, pinjamanRepo PinjamanRepo, auditSvc *AuditService, simpananPokok int64, zona *time.Location, now func() time.Time) *AnggotaService {
 	if now == nil {
 		now = time.Now
 	}
@@ -53,6 +73,7 @@ func NewAnggotaService(db database.Sumber, anggotaRepo AnggotaRepo, simpananRepo
 		db:            db,
 		anggotaRepo:   anggotaRepo,
 		simpananRepo:  simpananRepo,
+		pinjamanRepo:  pinjamanRepo,
 		auditSvc:      auditSvc,
 		simpananPokok: simpananPokok,
 		zona:          zona,
@@ -123,22 +144,49 @@ func (s *AnggotaService) Register(ctx context.Context, in DaftarAnggotaInput) (i
 	return idAnggota, nil
 }
 
-// GetAll mengembalikan seluruh anggota
-func (s *AnggotaService) GetAll(ctx context.Context) ([]model.Anggota, error) {
+// GetByID mengembalikan satu anggota; ErrAnggotaTidakDitemukan bila ID tidak ada
+func (s *AnggotaService) GetByID(ctx context.Context, id int64) (model.Anggota, error) {
 	if _, ok := IdentitasDari(ctx); !ok {
-		return nil, ErrBelumLogin
+		return model.Anggota{}, ErrBelumLogin
 	}
 
-	hasil, err := s.anggotaRepo.GetAll(ctx, s.db)
+	return s.findAnggota(ctx, s.db, id, false)
+}
+
+// GetAnggota mengembalikan data halaman detail anggota
+func (s *AnggotaService) GetAnggota(ctx context.Context, id int64) (GetAnggota, error) {
+	if _, ok := IdentitasDari(ctx); !ok {
+		return GetAnggota{}, ErrBelumLogin
+	}
+
+	a, err := s.findAnggota(ctx, s.db, id, false)
 	if err != nil {
-		return nil, fmt.Errorf("GetAll anggota: %w", err)
+		return GetAnggota{}, err
 	}
 
-	return hasil, nil
+	saldo, err := s.simpananRepo.Saldo(ctx, s.db, id)
+	if err != nil {
+		return GetAnggota{}, fmt.Errorf("GetAnggota %d: saldo: %w", id, err)
+	}
+
+	aktif, err := s.pinjamanRepo.AdaAktif(ctx, s.db, id)
+	if err != nil {
+		return GetAnggota{}, fmt.Errorf("GetAnggota %d: pinjaman aktif: %w", id, err)
+	}
+
+	return GetAnggota{
+		Anggota:       a,
+		Saldo:         saldo,
+		PinjamanAktif: aktif,
+	}, nil
 }
 
 // GetListFiltered mengembalikan daftar anggota yand difilter
 func (s *AnggotaService) GetListFiltered(ctx context.Context, cari, status string, page, limit int) (PaginatedAnggotaResponse, error) {
+	if _, ok := IdentitasDari(ctx); !ok {
+		return PaginatedAnggotaResponse{}, ErrBelumLogin
+	}
+
 	listAnggota, total, err := s.anggotaRepo.ListFiltered(ctx, s.db, cari, status, page, limit)
 	if err != nil {
 		return PaginatedAnggotaResponse{}, err
@@ -151,6 +199,68 @@ func (s *AnggotaService) GetListFiltered(ctx context.Context, cari, status strin
 		PageSize: limit,
 	}, err
 }
+
+// Update hanya dapat mengubah nama dan telepon anggota.
+// jika tidak ada yang berubah, maka audit tidak dicatat
+func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaInput) error {
+	if _, ok := IdentitasDari(ctx); !ok {
+		return ErrBelumLogin
+	}
+
+	nama, telepon := strings.TrimSpace(in.NamaLengkap), strings.TrimSpace(in.NoTelepon)
+
+	pesan := map[string]string{}
+	if nama == "" {
+		pesan["nama_lengkap"] = "wajib diisi"
+	} else if utf8.RuneCountInString(nama) > 100 {
+		pesan["nama_lengkap"] = "maksimal 100 karakter"
+	}
+
+	if utf8.RuneCountInString(telepon) > 20 {
+		pesan["no_telepon"] = "maksimal 20 karakter"
+	}
+
+	if len(pesan) > 0 {
+		return &ValidasiError{Pesan: pesan}
+	}
+
+	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
+		old, err := s.findAnggota(ctx, s.db, id, true)
+		if err != nil {
+			return err
+		}
+
+		changes := map[string]map[string]string{}
+		if old.NamaLengkap != nama {
+			changes["nama_lengkap"] = map[string]string{"dari": old.NamaLengkap, "menjadi": nama}
+		}
+		if old.NoTelepon != telepon {
+			changes["no_telepon"] = map[string]string{"dari": old.NoTelepon, "menjadi": telepon}
+		}
+
+		if len(changes) == 0 {
+			return nil
+		}
+
+		if err := s.anggotaRepo.Update(ctx, s.db, id, nama, telepon); err != nil {
+			return fmt.Errorf("Save update anggota: %w", err)
+		}
+
+		return s.auditSvc.NewEntri(ctx, tx, "ubah_anggota", "anggota", id, map[string]any{
+			"nomor_anggota": old.NomorAnggota,
+			"perubahan":     changes,
+		})
+	})
+
+	if err != nil {
+		return fmt.Errorf("Update anggota %d: %w", id, err)
+	}
+
+	return nil
+
+}
+
+//
 
 // HELPER //
 
@@ -197,6 +307,28 @@ func (s *AnggotaService) validasi(in DaftarAnggotaInput) (model.Anggota, error) 
 
 	if len(pesan) > 0 {
 		return model.Anggota{}, &ValidasiError{Pesan: pesan}
+	}
+
+	return a, nil
+}
+
+func (s *AnggotaService) findAnggota(ctx context.Context, db database.DBTX, id int64, kunci bool) (model.Anggota, error) {
+	var (
+		a   model.Anggota
+		err error
+	)
+
+	if kunci {
+		a, err = s.anggotaRepo.GetByIDForUpdate(ctx, db, id)
+	} else {
+		a, err = s.anggotaRepo.GetByID(ctx, db, id)
+	}
+
+	if errors.Is(err, repository.ErrTidakDitemukan) {
+		return model.Anggota{}, ErrAnggotaTidakDitemukan
+	}
+	if err != nil {
+		return model.Anggota{}, fmt.Errorf("findAnggota %d: %w", id, err)
 	}
 
 	return a, nil

@@ -131,6 +131,31 @@ type fakeAnggota struct {
 	statusFilter string
 	pageFilter   int
 	limitFilter  int
+
+	// data dipakai GetByID dan GetByIDForUpdate; isi lewat tambah.
+	data      map[int64]model.Anggota
+	kunci     int // berapa kali baris dikunci (GetByIDForUpdate)
+	ubah      []ubahProfil
+	keluar    []keluarAnggota
+	errUbah   error
+	errKeluar error
+}
+
+type ubahProfil struct {
+	id            int64
+	nama, telepon string
+}
+
+type keluarAnggota struct {
+	id      int64
+	tanggal time.Time
+}
+
+func (f *fakeAnggota) tambah(a model.Anggota) {
+	if f.data == nil {
+		f.data = map[int64]model.Anggota{}
+	}
+	f.data[a.ID] = a
 }
 
 func (f *fakeAnggota) Create(_ context.Context, _ database.DBTX, a model.Anggota) (int64, error) {
@@ -160,13 +185,51 @@ func (f *fakeAnggota) ListFiltered(
 	return f.hasilFilter, f.totalFilter, f.errFilter
 }
 
-func (f *fakeAnggota) GetAll(context.Context, database.DBTX) ([]model.Anggota, error) {
-	return f.dibuat, nil
+func (f *fakeAnggota) GetByID(_ context.Context, _ database.DBTX, id int64) (model.Anggota, error) {
+	a, ok := f.data[id]
+	if !ok {
+		return model.Anggota{}, repository.ErrTidakDitemukan
+	}
+	return a, nil
 }
 
-type fakeSimpanan struct{ dibuat []model.TransaksiSimpanan }
+func (f *fakeAnggota) GetByIDForUpdate(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error) {
+	f.kunci++
+	return f.GetByID(ctx, db, id)
+}
+
+func (f *fakeAnggota) Update(_ context.Context, _ database.DBTX, id int64, nama, telepon string) error {
+	if f.errUbah != nil {
+		return f.errUbah
+	}
+	f.ubah = append(f.ubah, ubahProfil{id, nama, telepon})
+	return nil
+}
+
+func (f *fakeAnggota) Keluarkan(_ context.Context, _ database.DBTX, id int64, tanggal time.Time) error {
+	if f.errKeluar != nil {
+		return f.errKeluar
+	}
+	f.keluar = append(f.keluar, keluarAnggota{id, tanggal})
+	return nil
+}
+
+type fakeSimpanan struct {
+	dibuat []model.TransaksiSimpanan
+	saldo  model.SaldoSimpanan
+}
 
 func (f *fakeSimpanan) Create(_ context.Context, _ database.DBTX, t model.TransaksiSimpanan) (int64, error) {
 	f.dibuat = append(f.dibuat, t)
 	return int64(len(f.dibuat)), nil
+}
+
+func (f *fakeSimpanan) Saldo(context.Context, database.DBTX, int64) (model.SaldoSimpanan, error) {
+	return f.saldo, nil
+}
+
+type fakePinjamanAktif struct{ aktif bool }
+
+func (f *fakePinjamanAktif) AdaAktif(context.Context, database.DBTX, int64) (bool, error) {
+	return f.aktif, nil
 }

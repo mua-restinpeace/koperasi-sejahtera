@@ -50,6 +50,14 @@ type fakeAnggota struct {
 	statusFilter string
 	pageFilter   int
 	limitFilter  int
+
+	errGet        error // dikembalikan GetByID, Detail, dan PratinjauKeluar
+	errUbah       error
+	errKeluar     error
+	pinjamanAktif bool
+	penghalang    error
+	diubah        []service.UpdateAnggotaInput
+	dikeluarkan   []int64
 }
 
 func (f *fakeAnggota) Register(_ context.Context, in service.DaftarAnggotaInput) (int64, error) {
@@ -59,8 +67,52 @@ func (f *fakeAnggota) Register(_ context.Context, in service.DaftarAnggotaInput)
 	f.diterima = append(f.diterima, in)
 	return 1, nil
 }
+
+func (f *fakeAnggota) GetByID(_ context.Context, id int64) (model.Anggota, error) {
+	if f.errGet != nil {
+		return model.Anggota{}, f.errGet
+	}
+	a := anggotaUji()
+	a.ID = id
+	return a, nil
+}
+
+func (f *fakeAnggota) GetAnggota(_ context.Context, id int64) (service.GetAnggota, error) {
+	if f.errGet != nil {
+		return service.GetAnggota{}, f.errGet
+	}
+	a := anggotaUji()
+	a.ID = id
+	return service.GetAnggota{
+		Anggota:       a,
+		Saldo:         model.SaldoSimpanan{Pokok: 500_000, Wajib: 1_200_000, Sukarela: 250_000},
+		PinjamanAktif: f.pinjamanAktif,
+	}, nil
+}
+
+func (f *fakeAnggota) Update(_ context.Context, id int64, in service.UpdateAnggotaInput) error {
+	if f.errUbah != nil {
+		return f.errUbah
+	}
+	f.diubah = append(f.diubah, in)
+	return nil
+}
+
 func (*fakeAnggota) GetAll(context.Context) ([]model.Anggota, error) {
 	return []model.Anggota{{NomorAnggota: "A-001", NamaLengkap: "Siti <b>Aminah</b>", TanggalBergabung: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), Status: "aktif"}}, nil
+}
+
+// anggotaUji adalah anggota aktif yang dikembalikan fakeAnggota. Nama memuat tag HTML
+// untuk memastikan template meng-escape-nya.
+func anggotaUji() model.Anggota {
+	return model.Anggota{
+		ID:               5,
+		NomorAnggota:     "A-005",
+		NamaLengkap:      "Siti <b>Aminah</b>",
+		NoTelepon:        "0812",
+		TanggalBergabung: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC),
+		Status:           "aktif",
+	}
 }
 
 func (f *fakeAnggota) GetListFiltered(

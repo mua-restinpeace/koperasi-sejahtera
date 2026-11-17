@@ -6,9 +6,11 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/helper"
 )
 
 type Handler struct {
@@ -43,6 +45,10 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 		return nil, fmt.Errorf("handler: error membaca daftar template: %w", err)
 	}
 
+	funcs := template.FuncMap{
+		"rupiah": helper.FormatRupiah,
+	}
+
 	tmpl := make(map[string]*template.Template, len(pages))
 	for _, nama := range pages {
 		layout := "layout/layout.html"
@@ -52,12 +58,13 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 			layout = "layout/auth.html"
 		}
 
-		t, err := template.ParseFS(
+		t, err := template.New(path.Base(layout)).Funcs(funcs).ParseFS(
 			templateFS,
 			layout,
 			"partials/*.html",
 			nama,
 		)
+
 		if err != nil {
 			return nil, fmt.Errorf(
 				"handler: error memuat template %s: %w",

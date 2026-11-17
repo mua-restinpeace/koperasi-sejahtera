@@ -1198,3 +1198,129 @@ body {
     justify-content: center;
   }
 }
+
+/* =========================
+   DETAIL, UBAH, DAN KELUAR ANGGOTA
+========================= */
+
+.anggota-detail-page {
+  width: 100%;
+}
+
+.anggota-detail-page h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.anggota-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.anggota-detail-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.anggota-detail-list {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px 16px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.anggota-detail-list dt {
+  color: var(--tx2);
+}
+
+.anggota-detail-list dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.anggota-saldo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.anggota-saldo-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.anggota-saldo-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.anggota-saldo-table tfoot td {
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.anggota-detail-loan {
+  margin: 16px 0 0;
+  font-size: 12px;
+}
+
+.anggota-badge-loan {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.anggota-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn.anggota-danger-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 11px;
+  background: var(--er);
+  font-size: 12px;
+}
+
+.btn.anggota-danger-btn:hover {
+  background: #c93a3f;
+  box-shadow: 0 4px 12px rgba(229, 72, 77, 0.25);
+}
+
+.anggota-notice {
+  margin: 18px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--mu);
+  color: var(--tx2);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.anggota-notice-danger {
+  margin-top: 0;
+  background: var(--erb);
+  color: var(--er);
+}
+
+@media (max-width: 800px) {
+  .anggota-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .anggota-detail-list {
+    grid-template-columns: 120px 1fr;
+  }
+}
+

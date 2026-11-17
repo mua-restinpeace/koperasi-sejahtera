@@ -7,3 +7,8 @@ func (h *Handler) internalError(w http.ResponseWriter, r *http.Request, err erro
 	h.log.Error("handler error", "method", r.Method, "path", r.URL.Path, "error", err)
 	http.Error(w, "Terjadi kesalahan pada server", http.StatusInternalServerError)
 }
+
+// notFound menjawab 404, dipakai bila ID di URL tidak valid atau datanya tidak ada
+func (h *Handler) notFound(w http.ResponseWriter) {
+	http.Error(w, "Data tidak ditemukan", http.StatusNotFound)
+}

@@ -1,0 +1,108 @@
+
+{{define "content"}}
+<section class="page anggota-detail-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>{{.Anggota.NamaLengkap}}</h1>
+            <p class="anggota-form-subtitle">
+                No. anggota {{.Anggota.NomorAnggota}}
+            </p>
+        </div>
+
+        <a href="/anggota" class="anggota-back-link">
+            ← Kembali ke Anggota
+        </a>
+    </div>
+
+    <div class="anggota-detail-grid">
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Profil</h3>
+
+            <dl class="anggota-detail-list">
+                <dt>Nomor anggota</dt>
+                <dd class="anggota-number">{{.Anggota.NomorAnggota}}</dd>
+
+                <dt>Nama lengkap</dt>
+                <dd>{{.Anggota.NamaLengkap}}</dd>
+
+                <dt>No. telepon</dt>
+                <dd>
+                    {{if .Anggota.NoTelepon}}
+                        {{.Anggota.NoTelepon}}
+                    {{else}}
+                        <span class="anggota-muted">—</span>
+                    {{end}}
+                </dd>
+
+                <dt>Tanggal bergabung</dt>
+                <dd>{{.Anggota.TanggalBergabung.Format "02-01-2006"}}</dd>
+
+                <dt>Status</dt>
+                <dd>
+                    {{if eq .Anggota.Status "aktif"}}
+                        <span class="anggota-badge anggota-badge-active">Aktif</span>
+                    {{else}}
+                        <span class="anggota-badge anggota-badge-exit">Keluar</span>
+                    {{end}}
+                </dd>
+
+                {{if .Anggota.TanggalKeluar}}
+                    <dt>Tanggal keluar</dt>
+                    <dd>{{.Anggota.TanggalKeluar.Format "02-01-2006"}}</dd>
+                {{end}}
+            </dl>
+        </div>
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Saldo simpanan</h3>
+
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr>
+                        <td>Simpanan pokok</td>
+                        <td>{{rupiah .Saldo.Pokok}}</td>
+                    </tr>
+                    <tr>
+                        <td>Simpanan wajib</td>
+                        <td>{{rupiah .Saldo.Wajib}}</td>
+                    </tr>
+                    <tr>
+                        <td>Simpanan sukarela</td>
+                        <td>{{rupiah .Saldo.Sukarela}}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td>{{rupiah .Saldo.Total}}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <p class="anggota-detail-loan">
+                {{if .PinjamanAktif}}
+                    <span class="anggota-badge anggota-badge-loan">Ada pinjaman aktif</span>
+                {{else}}
+                    <span class="anggota-muted">Tidak ada pinjaman aktif</span>
+                {{end}}
+            </p>
+        </div>
+
+    </div>
+
+    <div class="anggota-detail-actions">
+        <a href="/anggota/ubah/{{.Anggota.ID}}" class="anggota-cancel-btn">
+            Ubah Data
+        </a>
+
+        {{if eq .Anggota.Status "aktif"}}
+            <a href="/anggota/keluar/{{.Anggota.ID}}" class="btn anggota-danger-btn">
+                Keluarkan Anggota
+            </a>
+        {{end}}
+    </div>
+
+</section>
+{{end}}
