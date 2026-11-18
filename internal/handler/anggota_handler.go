@@ -20,6 +20,8 @@ type AnggotaService interface {
 	GetByID(ctx context.Context, id int64) (model.Anggota, error)
 	Update(ctx context.Context, id int64, in service.UpdateAnggotaInput) error
 	FormatTanggal() time.Time
+	PertinjauResign(ctx context.Context, id int64) (service.RincianResign, error)
+	Resign(ctx context.Context, id int64) (model.SaldoSimpanan, error)
 }
 
 type dataListAnggota struct {
@@ -56,6 +58,12 @@ type dataFormUpdateAnggota struct {
 	Anggota model.Anggota // nomor anggota ditampilkan tetapi tidak dapat diubah
 	Isian   service.UpdateAnggotaInput
 	Error   map[string]string
+}
+
+type dataAnggotaResign struct {
+	Halaman
+	service.RincianResign
+	Alasan string
 }
 
 // successMessage menerjemahkan query ?berhasil=.. pada URL menjadi pesan
@@ -303,5 +311,65 @@ func (h *Handler) SaveUpdateAnggota(w http.ResponseWriter, r *http.Request) {
 		h.error(w, r, err)
 	default:
 		http.Redirect(w, r, urlDetailAnggota(id, "ubah"), http.StatusSeeOther)
+	}
+}
+
+// FormAnggotaResign menampilkan halaman konfiramsi keluar
+// simpanan yang akan dikembalikan, atau alasan anggota belum boleh keluar
+func (h *Handler) FormAnggoaResign(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
+		return
+	}
+
+	h.resignConfirmation(w, r, id, http.StatusOK)
+}
+
+// resignConfirmation merender halaman konfirmasi keluar dengan status HTTP yang diminta
+func (h *Handler) resignConfirmation(w http.ResponseWriter, r *http.Request, id int64, status int) {
+	rincian, err := h.svc.Anggota.PertinjauResign(r.Context(), id)
+	switch {
+	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
+		h.notFound(w)
+		return
+	case err != nil:
+		h.error(w, r, err)
+		return
+	}
+
+	data := dataAnggotaResign{
+		Halaman:       h.halaman(r, "Anggota Resign", "anggota"),
+		RincianResign: rincian,
+	}
+
+	switch {
+	case errors.Is(rincian.Penghalang, service.ErrMasihAdaPinjamanAktif):
+		data.Alasan = "Anggota masih memiliki pinjaman aktif. Lunasi peminjamannya terlebh dahulu sebelum anggoa dikeluarkan."
+	case errors.Is(rincian.Penghalang, service.ErrAnggotaSudahKeluar):
+		data.Alasan = "Anggota sudah sudah berstatus keluar."
+	}
+	h.render(w, status, "pages/anggota_keluar.html", data)
+}
+
+// AnggotaResign mengeluarkan anggota
+// bila ditolak, halaman konfirmasi ditampilkan lagi dengan alasannya
+func (h *Handler) AnggotaResign(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
+		return
+	}
+
+	_, err := h.svc.Anggota.Resign(r.Context(), id)
+	switch {
+	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
+		h.notFound(w)
+	case errors.Is(err, service.ErrMasihAdaPinjamanAktif), errors.Is(err, service.ErrAnggotaSudahKeluar):
+		h.resignConfirmation(w, r, id, http.StatusConflict)
+	case err != nil:
+		h.error(w, r, err)
+	default:
+		http.Redirect(w, r, urlDetailAnggota(id, "keluar"), http.StatusSeeOther)
 	}
 }

@@ -206,7 +206,7 @@ func (f *fakeAnggota) Update(_ context.Context, _ database.DBTX, id int64, nama,
 	return nil
 }
 
-func (f *fakeAnggota) Keluarkan(_ context.Context, _ database.DBTX, id int64, tanggal time.Time) error {
+func (f *fakeAnggota) Deactivate(_ context.Context, _ database.DBTX, id int64, tanggal time.Time) error {
 	if f.errKeluar != nil {
 		return f.errKeluar
 	}

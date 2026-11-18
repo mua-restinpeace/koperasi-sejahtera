@@ -19,6 +19,7 @@ type AnggotaRepo interface {
 	GetByID(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error)
 	GetByIDForUpdate(ctx context.Context, db database.DBTX, id int64) (model.Anggota, error)
 	Update(ctx context.Context, db database.DBTX, id int64, nama, telepon string) error
+	Deactivate(ctx context.Context, db database.DBTX, id int64, tanggal time.Time) error
 }
 
 type SimpananRepo interface {
@@ -58,6 +59,17 @@ type GetAnggota struct {
 	Anggota       model.Anggota
 	Saldo         model.SaldoSimpanan
 	PinjamanAktif bool
+}
+
+// RincianKeluar adalah yang ditampilkan sebelum anggota dikeluarkan: simpanan
+// yang akan dikembalikan.
+type RincianResign struct {
+	Anggota model.Anggota
+	Saldo   model.SaldoSimpanan
+
+	// Penghalang berisi alasan anggota belum boleh keluar (ErrAnggotaSudahKeluar
+	// atau ErrMasihAdaPinjamanAktif); nil bila boleh keluar.
+	Penghalang error
 }
 
 func NewAnggotaService(db database.Sumber, anggotaRepo AnggotaRepo, simpananRepo SimpananRepo, pinjamanRepo PinjamanRepo, auditSvc *AuditService, simpananPokok int64, zona *time.Location, now func() time.Time) *AnggotaService {
@@ -260,7 +272,118 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 
 }
 
-//
+// PertinjauResign menyiapkan halaman konfirmasi keluar
+// saldo simpanan yang akan dikembalikan atau alasan anggota belum boleh keluar
+func (s *AnggotaService) PertinjauResign(ctx context.Context, id int64) (RincianResign, error) {
+	if _, ok := IdentitasDari(ctx); !ok {
+		return RincianResign{}, ErrBelumLogin
+	}
+
+	a, err := s.findAnggota(ctx, s.db, id, false)
+	if err != nil {
+		return RincianResign{}, err
+	}
+
+	saldo, err := s.simpananRepo.Saldo(ctx, s.db, id)
+	if err != nil {
+		return RincianResign{}, fmt.Errorf("pertinjau resign %d: saldo %w", id, err)
+	}
+
+	r := RincianResign{Anggota: a, Saldo: saldo}
+	if err := s.keluarGuard(ctx, s.db, a); err != nil {
+		if !errors.Is(err, ErrAnggotaSudahKeluar) && !errors.Is(err, ErrMasihAdaPinjamanAktif) {
+			return RincianResign{}, fmt.Errorf("pertinjau resign %d: %w", id, err)
+		}
+
+		r.Penghalang = err
+	}
+
+	return r, nil
+}
+
+// Resign mengeluarkan anggota
+// ditolak apabila masih ada pinjaman aktif
+func (s AnggotaService) Resign(ctx context.Context, id int64) (model.SaldoSimpanan, error) {
+	idn, ok := IdentitasDari(ctx)
+	if !ok {
+		return model.SaldoSimpanan{}, ErrBelumLogin
+	}
+
+	var saldo model.SaldoSimpanan
+	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
+		a, err := s.findAnggota(ctx, s.db, id, true)
+		if err != nil {
+			return err
+		}
+
+		if err := s.keluarGuard(ctx, tx, a); err != nil {
+			return err
+		}
+
+		saldo, err = s.simpananRepo.Saldo(ctx, tx, a.ID)
+		if err != nil {
+			return fmt.Errorf("hitung saldo: %w", err)
+		}
+
+		if saldo.Pokok < 0 || saldo.Wajib < 0 || saldo.Sukarela < 0 {
+			return fmt.Errorf("saldo simpanan negatif (pokok %d, wajib %d, sukarela %d)", saldo.Pokok, saldo.Wajib, saldo.Sukarela)
+		}
+
+		tanggal := s.FormatTanggal()
+		pengembalian := []struct {
+			kategori   string
+			jumlah     int64
+			keterangan string
+		}{
+			{model.SimpananPokok, saldo.Pokok, "Pengembailan simpanan pokok saat anggota keluar"},
+			{model.SimpananWajib, saldo.Wajib, "Pengembalian simpanan wajib saat anggota keluar"},
+			{model.SimpananSukarela, saldo.Sukarela, "Pengembalian simpanan sukarela saat anggota keluar"},
+		}
+
+		idSimpanan := map[string]int64{}
+		for _, p := range pengembalian {
+			if p.jumlah == 0 {
+				continue
+			}
+
+			idTrx, err := s.simpananRepo.Create(ctx, tx, model.TransaksiSimpanan{
+				IDAnggota:        id,
+				Kategori:         p.kategori,
+				TipeMutasi:       model.MutasiTarik,
+				Jumlah:           p.jumlah,
+				TanggalTransaksi: tanggal,
+				Keterangan:       p.keterangan,
+				DibuatOleh:       idn.IDPengguna,
+			})
+
+			if err != nil {
+				return fmt.Errorf("audit penarikan %s: %w", p.kategori, err)
+			}
+
+			idSimpanan[p.kategori] = idTrx
+		}
+
+		if err := s.anggotaRepo.Deactivate(ctx, tx, id, tanggal); err != nil {
+			return fmt.Errorf("Deactivate anggota: %w", err)
+		}
+
+		return s.auditSvc.NewEntri(ctx, tx, "keluar_anggota", "anggota", id, map[string]any{
+			"nomor_anggota":      a.NomorAnggota,
+			"tanggal_keluar":     tanggal.Format("2006-01-02"),
+			"saldo_pokok":        saldo.Pokok,
+			"saldo_wajib":        saldo.Wajib,
+			"saldo_sukarela":     saldo.Sukarela,
+			"total_dikembalikan": saldo.Total(),
+			"id_simpanan":        idSimpanan,
+		})
+	})
+
+	if err != nil {
+		return model.SaldoSimpanan{}, fmt.Errorf("deactivate anggota %d: %w", id, err)
+	}
+
+	return saldo, nil
+}
 
 // HELPER //
 
@@ -332,4 +455,23 @@ func (s *AnggotaService) findAnggota(ctx context.Context, db database.DBTX, id i
 	}
 
 	return a, nil
+}
+
+// KeluarGuard mengembalikan alasan anggota belum boleh keluar
+// atau nil bila boleh
+func (s *AnggotaService) keluarGuard(ctx context.Context, db database.DBTX, a model.Anggota) error {
+	if a.Status != model.StatusAnggotaAktif {
+		return ErrAnggotaSudahKeluar
+	}
+
+	ada, err := s.pinjamanRepo.AdaAktif(ctx, db, a.ID)
+	if err != nil {
+		return fmt.Errorf("cek pinjaman aktif: %w", err)
+	}
+
+	if ada {
+		return ErrMasihAdaPinjamanAktif
+	}
+
+	return nil
 }

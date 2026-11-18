@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"time"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/database"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/model"
@@ -104,6 +105,28 @@ func (AnggotaRepo) Update(ctx context.Context, db database.DBTX, id int64, nama,
 
 	_, err := db.ExecContext(ctx, query, nama, nullBilaKosong(telepon), id)
 	return petakanError(err, "Update anggota")
+}
+
+// Deactiveate mengubah status anggota aktif menjadi keluar.
+func (AnggotaRepo) Deactivate(ctx context.Context, db database.DBTX, id int64, tanggal time.Time) error {
+	query := `UPDATE anggota SET status = 'keluar', tanggal_keluar = ?
+	WHERE id = ? AND status = 'aktif'`
+
+	res, err := db.ExecContext(ctx, query, tanggal.Format("2006-01-02"), id)
+	if err != nil {
+		return petakanError(err, "Deactivate anggota")
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return petakanError(err, "Deactivate anggota")
+	}
+
+	if n == 0 {
+		return ErrTidakDitemukan
+	}
+
+	return nil
 }
 
 // HELPER //
