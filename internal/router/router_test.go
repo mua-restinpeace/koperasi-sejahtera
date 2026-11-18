@@ -98,6 +98,27 @@ func (f *fakeAnggota) Update(_ context.Context, id int64, in service.UpdateAnggo
 	return nil
 }
 
+func (f *fakeAnggota) PertinjauResign(_ context.Context, id int64) (service.RincianResign, error) {
+	if f.errGet != nil {
+		return service.RincianResign{}, f.errGet
+	}
+	a := anggotaUji()
+	a.ID = id
+	return service.RincianResign{
+		Anggota:    a,
+		Saldo:      model.SaldoSimpanan{Pokok: 500_000, Wajib: 1_200_000, Sukarela: 250_000},
+		Penghalang: f.penghalang,
+	}, nil
+}
+
+func (f *fakeAnggota) Resign(_ context.Context, id int64) (model.SaldoSimpanan, error) {
+	if f.errKeluar != nil {
+		return model.SaldoSimpanan{}, f.errKeluar
+	}
+	f.dikeluarkan = append(f.dikeluarkan, id)
+	return model.SaldoSimpanan{}, nil
+}
+
 func (*fakeAnggota) GetAll(context.Context) ([]model.Anggota, error) {
 	return []model.Anggota{{NomorAnggota: "A-001", NamaLengkap: "Siti <b>Aminah</b>", TanggalBergabung: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), Status: "aktif"}}, nil
 }
@@ -307,4 +328,77 @@ func TestListFilteredAnggota(t *testing.T) {
 		ang.limitFilter != 10 {
 		t.Errorf("parameter filter tidak diteruskan dengan benar")
 	}
+}
+
+func TestKeluarAnggota(t *testing.T) {
+	t.Run("halaman konfirmasi menampilkan simpanan yang dikembalikan", func(t *testing.T) {
+		h, _, _ := siap(t)
+
+		w := kirim(h, http.MethodGet, "/anggota/keluar/5", nil, "token-ani")
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
+		}
+		b := w.Body.String()
+		for _, want := range []string{"Rp1.950.000", `action="/anggota/keluar/5"`, `name="csrf_token" value="csrf-ani"`} {
+			if !strings.Contains(b, want) {
+				t.Errorf("halaman tidak memuat %q", want)
+			}
+		}
+	})
+
+	t.Run("pinjaman aktif: alasan ditampilkan, tanpa form konfirmasi", func(t *testing.T) {
+		h, _, ang := siap(t)
+		ang.penghalang = service.ErrMasihAdaPinjamanAktif
+
+		w := kirim(h, http.MethodGet, "/anggota/keluar/5", nil, "token-ani")
+		b := w.Body.String()
+		if w.Code != http.StatusOK || !strings.Contains(b, "pinjaman aktif") || strings.Contains(b, `action="/anggota/keluar/5"`) {
+			t.Errorf("status=%d; harus menampilkan alasan dan tanpa form", w.Code)
+		}
+	})
+
+	t.Run("proses: CSRF wajib, lalu dialihkan ke detail", func(t *testing.T) {
+		h, _, ang := siap(t)
+
+		if w := kirim(h, http.MethodPost, "/anggota/keluar/5", url.Values{}, "token-ani"); w.Code != http.StatusForbidden || len(ang.dikeluarkan) != 0 {
+			t.Errorf("tanpa csrf: status=%d dikeluarkan=%v", w.Code, ang.dikeluarkan)
+		}
+
+		w := kirim(h, http.MethodPost, "/anggota/keluar/5", url.Values{"csrf_token": {"csrf-ani"}}, "token-ani")
+		if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/anggota/5?berhasil=keluar" {
+			t.Fatalf("status=%d location=%q", w.Code, w.Header().Get("Location"))
+		}
+		if len(ang.dikeluarkan) != 1 || ang.dikeluarkan[0] != 5 {
+			t.Errorf("dikeluarkan = %v", ang.dikeluarkan)
+		}
+	})
+
+	t.Run("ditolak service: 409 dengan alasan", func(t *testing.T) {
+		h, _, ang := siap(t)
+		ang.errKeluar = service.ErrMasihAdaPinjamanAktif
+		ang.penghalang = service.ErrMasihAdaPinjamanAktif
+
+		w := kirim(h, http.MethodPost, "/anggota/keluar/5", url.Values{"csrf_token": {"csrf-ani"}}, "token-ani")
+		if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "pinjaman aktif") {
+			t.Errorf("status=%d, want 409 dengan alasan", w.Code)
+		}
+		if len(ang.dikeluarkan) != 0 {
+			t.Error("anggota tidak boleh dikeluarkan")
+		}
+	})
+
+	t.Run("tidak ada: 404; galat tak terduga: 500", func(t *testing.T) {
+		h, _, ang := siap(t)
+		form := url.Values{"csrf_token": {"csrf-ani"}}
+
+		ang.errKeluar = service.ErrAnggotaTidakDitemukan
+		if w := kirim(h, http.MethodPost, "/anggota/keluar/5", form, "token-ani"); w.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want 404", w.Code)
+		}
+
+		ang.errKeluar = io.ErrUnexpectedEOF
+		if w := kirim(h, http.MethodPost, "/anggota/keluar/5", form, "token-ani"); w.Code != http.StatusInternalServerError || strings.Contains(w.Body.String(), "EOF") {
+			t.Errorf("status=%d body=%q", w.Code, w.Body.String())
+		}
+	})
 }

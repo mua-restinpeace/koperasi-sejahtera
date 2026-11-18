@@ -432,3 +432,172 @@ func TestAnggota_Update(t *testing.T) {
 		}
 	})
 }
+
+func TestAnggota_PertinjauResign(t *testing.T) {
+	t.Run("boleh keluar: saldo ditampilkan, tanpa penghalang", func(t *testing.T) {
+		s, db, ag, sp, _ := siapAnggota()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000, Wajib: 300_000}
+
+		r, err := s.PertinjauResign(ctxLogin(), 5)
+		if err != nil || r.Penghalang != nil {
+			t.Fatalf("err=%v penghalang=%v", err, r.Penghalang)
+		}
+		if r.Saldo.Total() != 800_000 {
+			t.Errorf("saldo = %+v", r.Saldo)
+		}
+		if db.tx != 0 || len(ag.keluar) != 0 {
+			t.Error("pratinjau tidak boleh menulis apa pun")
+		}
+	})
+
+	t.Run("masih ada pinjaman aktif", func(t *testing.T) {
+		s, _, ag, _, _, pj := siapAnggotaLengkap()
+		ag.tambah(anggotaUji())
+		pj.aktif = true
+
+		r, err := s.PertinjauResign(ctxLogin(), 5)
+		if err != nil || !errors.Is(r.Penghalang, ErrMasihAdaPinjamanAktif) {
+			t.Errorf("err=%v penghalang=%v, want ErrMasihAdaPinjamanAktif", err, r.Penghalang)
+		}
+	})
+
+	t.Run("sudah keluar", func(t *testing.T) {
+		s, _, ag, _, _ := siapAnggota()
+		a := anggotaUji()
+		a.Status = model.StatusAnggotaKeluar
+		ag.tambah(a)
+
+		r, err := s.PertinjauResign(ctxLogin(), 5)
+		if err != nil || !errors.Is(r.Penghalang, ErrAnggotaSudahKeluar) {
+			t.Errorf("err=%v penghalang=%v, want ErrAnggotaSudahKeluar", err, r.Penghalang)
+		}
+	})
+
+	t.Run("anggota tidak ada", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if _, err := s.PertinjauResign(ctxLogin(), 99); !errors.Is(err, ErrAnggotaTidakDitemukan) {
+			t.Errorf("err = %v, want ErrAnggotaTidakDitemukan", err)
+		}
+	})
+}
+
+func TestAnggota_Keluarkan(t *testing.T) {
+	t.Run("berhasil: penarikan tiap kategori, status keluar, audit, satu transaksi", func(t *testing.T) {
+		s, db, ag, sp, au := siapAnggota()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000, Wajib: 1_200_000, Sukarela: 250_000}
+
+		saldo, err := s.Resign(ctxLogin(), 5)
+		if err != nil {
+			t.Fatalf("Resign: %v", err)
+		}
+		if saldo.Total() != 1_950_000 {
+			t.Errorf("saldo dikembalikan = %+v", saldo)
+		}
+		if db.tx != 1 || db.rollback != 0 || ag.kunci != 1 {
+			t.Errorf("tx=%d rollback=%d kunci=%d; satu transaksi dengan baris terkunci", db.tx, db.rollback, ag.kunci)
+		}
+
+		want := map[string]int64{model.SimpananPokok: 500_000, model.SimpananWajib: 1_200_000, model.SimpananSukarela: 250_000}
+		if len(sp.dibuat) != 3 {
+			t.Fatalf("penarikan = %d, want 3", len(sp.dibuat))
+		}
+		for _, p := range sp.dibuat {
+			if p.TipeMutasi != model.MutasiTarik || p.IDAnggota != 5 || p.DibuatOleh != 7 || p.Periode != nil || p.Jumlah != want[p.Kategori] {
+				t.Errorf("penarikan tidak sesuai: %+v", p)
+			}
+			if p.TanggalTransaksi != time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC) {
+				t.Errorf("tanggal = %v, want 2026-11-11 (tanggal bisnis WIB)", p.TanggalTransaksi)
+			}
+		}
+
+		if len(ag.keluar) != 1 || ag.keluar[0].id != 5 || ag.keluar[0].tanggal != time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC) {
+			t.Errorf("keluar = %+v", ag.keluar)
+		}
+		if len(au.entri) != 1 || au.entri[0].Aksi != "keluar_anggota" || au.entri[0].IDEntitas != 5 {
+			t.Fatalf("audit = %+v", au.entri)
+		}
+		if detail := string(au.entri[0].Detail); !strings.Contains(detail, `"total_dikembalikan":1950000`) {
+			t.Errorf("detail audit = %s", detail)
+		}
+	})
+
+	t.Run("kategori kosong dilewati", func(t *testing.T) {
+		s, _, ag, sp, _ := siapAnggota()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000}
+
+		if _, err := s.Resign(ctxLogin(), 5); err != nil {
+			t.Fatal(err)
+		}
+		if len(sp.dibuat) != 1 || sp.dibuat[0].Kategori != model.SimpananPokok {
+			t.Errorf("penarikan = %+v, want hanya pokok (jumlah harus > 0)", sp.dibuat)
+		}
+	})
+
+	t.Run("ditolak bila masih ada pinjaman aktif: tidak ada yang tertulis", func(t *testing.T) {
+		s, db, ag, sp, au, pj := siapAnggotaLengkap()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000}
+		pj.aktif = true
+
+		_, err := s.Resign(ctxLogin(), 5)
+		if !errors.Is(err, ErrMasihAdaPinjamanAktif) {
+			t.Fatalf("err = %v, want ErrMasihAdaPinjamanAktif", err)
+		}
+		if db.rollback != 1 || len(sp.dibuat) != 0 || len(ag.keluar) != 0 || len(au.entri) != 0 {
+			t.Errorf("rollback=%d penarikan=%d keluar=%d audit=%d", db.rollback, len(sp.dibuat), len(ag.keluar), len(au.entri))
+		}
+	})
+
+	t.Run("ditolak bila sudah keluar", func(t *testing.T) {
+		s, _, ag, sp, _ := siapAnggota()
+		a := anggotaUji()
+		a.Status = model.StatusAnggotaKeluar
+		ag.tambah(a)
+		sp.saldo = model.SaldoSimpanan{Pokok: 1}
+
+		if _, err := s.Resign(ctxLogin(), 5); !errors.Is(err, ErrAnggotaSudahKeluar) {
+			t.Errorf("err = %v, want ErrAnggotaSudahKeluar", err)
+		}
+		if len(sp.dibuat) != 0 {
+			t.Error("tidak boleh ada penarikan untuk anggota yang sudah keluar")
+		}
+	})
+
+	t.Run("saldo negatif ditolak", func(t *testing.T) {
+		s, _, ag, sp, _ := siapAnggota()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000, Sukarela: -1}
+
+		if _, err := s.Resign(ctxLogin(), 5); err == nil || len(sp.dibuat) != 0 {
+			t.Errorf("err=%v penarikan=%d; saldo negatif tidak boleh diproses", err, len(sp.dibuat))
+		}
+	})
+
+	t.Run("anggota tidak ada", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if _, err := s.Resign(ctxLogin(), 99); !errors.Is(err, ErrAnggotaTidakDitemukan) {
+			t.Errorf("err = %v, want ErrAnggotaTidakDitemukan", err)
+		}
+	})
+
+	t.Run("audit gagal membatalkan transaksi", func(t *testing.T) {
+		s, db, ag, sp, au := siapAnggota()
+		ag.tambah(anggotaUji())
+		sp.saldo = model.SaldoSimpanan{Pokok: 500_000}
+		au.err = errors.New("disk penuh")
+
+		if _, err := s.Resign(ctxLogin(), 5); err == nil || db.rollback != 1 {
+			t.Errorf("err=%v rollback=%d; audit gagal harus membatalkan transaksi", err, db.rollback)
+		}
+	})
+
+	t.Run("butuh login", func(t *testing.T) {
+		s, _, _, _, _ := siapAnggota()
+		if _, err := s.Resign(context.Background(), 5); !errors.Is(err, ErrBelumLogin) {
+			t.Errorf("err = %v, want ErrBelumLogin", err)
+		}
+	})
+}
