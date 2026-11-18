@@ -237,7 +237,7 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 	}
 
 	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
-		old, err := s.findAnggota(ctx, s.db, id, true)
+		old, err := s.findAnggota(ctx, tx, id, true)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 			return nil
 		}
 
-		if err := s.anggotaRepo.Update(ctx, s.db, id, nama, telepon); err != nil {
+		if err := s.anggotaRepo.Update(ctx, tx, id, nama, telepon); err != nil {
 			return fmt.Errorf("Save update anggota: %w", err)
 		}
 
@@ -311,7 +311,7 @@ func (s AnggotaService) Resign(ctx context.Context, id int64) (model.SaldoSimpan
 
 	var saldo model.SaldoSimpanan
 	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
-		a, err := s.findAnggota(ctx, s.db, id, true)
+		a, err := s.findAnggota(ctx, tx, id, true)
 		if err != nil {
 			return err
 		}
