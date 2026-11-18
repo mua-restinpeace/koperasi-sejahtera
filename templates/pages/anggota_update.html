@@ -1,0 +1,104 @@
+
+{{define "content"}}
+<section class="page anggota-form-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Ubah Data Anggota</h1>
+            <p class="anggota-form-subtitle">
+                Perbarui nama dan nomor telepon anggota.
+            </p>
+        </div>
+
+        <a href="/anggota/detail/{{.Anggota.ID}}" class="anggota-back-link">
+            ← Kembali ke Detail
+        </a>
+    </div>
+
+    <div class="anggota-form-card">
+
+        <div class="anggota-form-intro">
+            <h3>{{.Anggota.NomorAnggota}}</h3>
+            <p>Nomor anggota dan tanggal bergabung tidak dapat diubah.</p>
+        </div>
+
+        <form method="POST" action="/anggota/update/{{.Anggota.ID}}" class="anggota-form">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{.CSRF}}"
+            >
+
+            <div class="anggota-field">
+                <label for="nomor_anggota">Nomor anggota</label>
+
+                <input
+                    id="nomor_anggota"
+                    type="text"
+                    value="{{.Anggota.NomorAnggota}}"
+                    disabled
+                >
+            </div>
+
+            <div class="anggota-field">
+                <label for="nama_lengkap">
+                    Nama lengkap
+                    <span class="anggota-required">*</span>
+                </label>
+
+                <input
+                    id="nama_lengkap"
+                    name="nama_lengkap"
+                    type="text"
+                    value="{{.Isian.NamaLengkap}}"
+                    maxlength="100"
+                    autocomplete="name"
+                    required
+                >
+
+                {{with index .Error "nama_lengkap"}}
+                    <p class="anggota-error">{{.}}</p>
+                {{end}}
+            </div>
+
+            <div class="anggota-field">
+                <label for="no_telepon">
+                    Nomor telepon
+                    <span class="anggota-optional">(Opsional)</span>
+                </label>
+
+                <input
+                    id="no_telepon"
+                    name="no_telepon"
+                    type="tel"
+                    value="{{.Isian.NoTelepon}}"
+                    maxlength="20"
+                    autocomplete="tel"
+                >
+
+                {{with index .Error "no_telepon"}}
+                    <p class="anggota-error">{{.}}</p>
+                {{end}}
+            </div>
+
+            <div class="anggota-form-note">
+                <span class="anggota-required">*</span>
+                Wajib diisi.
+            </div>
+
+            <div class="anggota-form-actions">
+                <a href="/anggota/detail/{{.Anggota.ID}}" class="anggota-cancel-btn">
+                    Batal
+                </a>
+
+                <button type="submit" class="btn anggota-save-btn">
+                    Simpan Perubahan
+                    <span aria-hidden="true">→</span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</section>
+{{end}}

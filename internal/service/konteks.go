@@ -36,6 +36,10 @@ var (
 	ErrSesiTidakValid       = errors.New("sesi tidak valid atau sudah berakhir")
 	ErrBelumLogin           = errors.New("belum login")
 	ErrNomorAnggotaSudahAda = errors.New("nomor anggota sudah dipakai")
+
+	ErrAnggotaTidakDitemukan = errors.New("anggota tidak ditemukan")
+	ErrAnggotaSudahKeluar    = errors.New("anggota sudah berstatus keluar")
+	ErrMasihAdaPinjamanAktif = errors.New("anggota masih memiliki pinjaman aktif")
 )
 
 // ValidasiError berisi pesan kesalahan per kolom isian, untuk ditampilkan di form.

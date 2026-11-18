@@ -37,7 +37,7 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
-	_, err = time.LoadLocation(zonaBisnis)
+	zona, err := time.LoadLocation(zonaBisnis)
 	if err != nil {
 		return fmt.Errorf("error memuat zona waktu: %w", err)
 	}
@@ -55,9 +55,14 @@ func run(log *slog.Logger) error {
 
 	// Repository tidak menyimpan state
 	// service menerima keduanya lewat interface
+	auditSvc := service.NewAuditService(repository.AuditRepo{})
 	authService := service.NewAuthService(sumber, repository.PenggunaRepo{}, repository.SesiRepo{}, service.HasherPBKDF2{}, time.Duration(cfg.SesiJam)*time.Hour, nil, log)
+	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, repository.PinjamanRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
 
-	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{Auth: authService})
+	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
+		Auth:    authService,
+		Anggota: anggotaSvc,
+	})
 
 	if err != nil {
 		return err

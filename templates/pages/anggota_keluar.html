@@ -1,0 +1,91 @@
+
+{{define "content"}}
+<section class="page anggota-form-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Keluarkan Anggota</h1>
+            <p class="anggota-form-subtitle">
+                {{.Anggota.NomorAnggota}} · {{.Anggota.NamaLengkap}}
+            </p>
+        </div>
+
+        <a href="/anggota/{{.Anggota.ID}}" class="anggota-back-link">
+            ← Kembali ke Detail
+        </a>
+    </div>
+
+    <div class="anggota-form-card">
+
+        {{if .Alasan}}
+
+            <p class="anggota-notice anggota-notice-danger" role="alert">
+                {{.Alasan}}
+            </p>
+
+            <div class="anggota-form-actions">
+                <a href="/anggota/{{.Anggota.ID}}" class="anggota-cancel-btn">
+                    Kembali ke Detail
+                </a>
+            </div>
+
+        {{else}}
+
+            <div class="anggota-form-intro">
+                <h3>Simpanan yang dikembalikan</h3>
+                <p>Seluruh saldo simpanan berikut dikembalikan kepada anggota.</p>
+            </div>
+
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr>
+                        <td>Simpanan pokok</td>
+                        <td>{{rupiah .Saldo.Pokok}}</td>
+                    </tr>
+                    <tr>
+                        <td>Simpanan wajib</td>
+                        <td>{{rupiah .Saldo.Wajib}}</td>
+                    </tr>
+                    <tr>
+                        <td>Simpanan sukarela</td>
+                        <td>{{rupiah .Saldo.Sukarela}}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total dikembalikan</td>
+                        <td>{{rupiah .Saldo.Total}}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <p class="anggota-notice">
+                Setelah dikonfirmasi, simpanan dicatat sebagai penarikan dan status
+                anggota menjadi Keluar. Serahkan dana sesuai jumlah di atas.
+            </p>
+
+            <form method="POST" action="/anggota/keluar/{{.Anggota.ID}}" class="anggota-form">
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{.CSRF}}"
+                >
+
+                <div class="anggota-form-actions">
+                    <a href="/anggota/{{.Anggota.ID}}" class="anggota-cancel-btn">
+                        Batal
+                    </a>
+
+                    <button type="submit" class="btn anggota-danger-btn">
+                        Keluarkan Anggota
+                    </button>
+                </div>
+
+            </form>
+
+        {{end}}
+
+    </div>
+</section>
+{{end}}
