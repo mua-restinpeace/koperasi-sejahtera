@@ -29,6 +29,7 @@ type dataListAnggota struct {
 	Cari         string
 	FilterStatus string
 	Limit        int
+	Path         string
 
 	Total  int
 	Mulai  int
@@ -75,6 +76,14 @@ func successMessage(kode string) string {
 		return "Data anggota berhasil diubah"
 	case "keluar":
 		return "Anggota berhasil dikeluarkan dan simpanannya dicatat sebagai dikembalikan"
+	case "wajib":
+		return "Setoran simpanan wajib berhasil dicatat"
+	case "setor":
+		return "Setoran simpanan sukarela berhasil dicatat"
+	case "tarik":
+		return "Penarikan simpanan sukarela berhasil dicatat"
+	case "batal":
+		return "Transaksi simpanan berhasil dibatalkan"
 	default:
 		return ""
 	}
@@ -118,6 +127,11 @@ func (h *Handler) DetailAnggota(w http.ResponseWriter, r *http.Request) {
 
 // GetListFiltered menampilkan seluruh anggota yang difilter
 func (h *Handler) GetListFiltered(w http.ResponseWriter, r *http.Request) {
+	path, judul, menu := "/anggota", "Anggoat", "anggota"
+	if r.URL.Path == "/simpanan" {
+		path, judul, menu = "/simpanan", "Simpanan", "simpanan"
+	}
+
 	q := r.URL.Query()
 	cari := strings.TrimSpace(q.Get("q"))
 	status := q.Get("status")
@@ -145,7 +159,7 @@ func (h *Handler) GetListFiltered(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hal := h.halaman(r, "Anggota", "anggota")
+	hal := h.halaman(r, judul, menu)
 	if q.Get("berhasil") == "1" {
 		hal.Pesan = successMessage(q.Get("berhasil"))
 	}
@@ -176,6 +190,7 @@ func (h *Handler) GetListFiltered(w http.ResponseWriter, r *http.Request) {
 		Cari:         cari,
 		FilterStatus: status,
 		Limit:        limit,
+		Path:         path,
 
 		Total:  res.Total,
 		Mulai:  mulai,

@@ -22,11 +22,6 @@ type AnggotaRepo interface {
 	Deactivate(ctx context.Context, db database.DBTX, id int64, tanggal time.Time) error
 }
 
-type SimpananRepo interface {
-	Create(ctx context.Context, db database.DBTX, t model.TransaksiSimpanan) (int64, error)
-	Saldo(ctx context.Context, db database.DBTX, idAnggota int64) (model.SaldoSimpanan, error)
-}
-
 type PinjamanRepo interface {
 	AdaAktif(ctx context.Context, db database.DBTX, idAnggota int64) (bool, error)
 }
@@ -162,7 +157,7 @@ func (s *AnggotaService) GetByID(ctx context.Context, id int64) (model.Anggota, 
 		return model.Anggota{}, ErrBelumLogin
 	}
 
-	return s.findAnggota(ctx, s.db, id, false)
+	return findAnggota(ctx, s.anggotaRepo, s.db, id, false)
 }
 
 // GetAnggota mengembalikan data halaman detail anggota
@@ -171,7 +166,7 @@ func (s *AnggotaService) GetAnggota(ctx context.Context, id int64) (GetAnggota, 
 		return GetAnggota{}, ErrBelumLogin
 	}
 
-	a, err := s.findAnggota(ctx, s.db, id, false)
+	a, err := findAnggota(ctx, s.anggotaRepo, s.db, id, false)
 	if err != nil {
 		return GetAnggota{}, err
 	}
@@ -237,7 +232,7 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 	}
 
 	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
-		old, err := s.findAnggota(ctx, tx, id, true)
+		old, err := findAnggota(ctx, s.anggotaRepo, s.db, id, true)
 		if err != nil {
 			return err
 		}
@@ -279,7 +274,7 @@ func (s *AnggotaService) PertinjauResign(ctx context.Context, id int64) (Rincian
 		return RincianResign{}, ErrBelumLogin
 	}
 
-	a, err := s.findAnggota(ctx, s.db, id, false)
+	a, err := findAnggota(ctx, s.anggotaRepo, s.db, id, false)
 	if err != nil {
 		return RincianResign{}, err
 	}
@@ -311,7 +306,7 @@ func (s AnggotaService) Resign(ctx context.Context, id int64) (model.SaldoSimpan
 
 	var saldo model.SaldoSimpanan
 	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
-		a, err := s.findAnggota(ctx, tx, id, true)
+		a, err := findAnggota(ctx, s.anggotaRepo, s.db, id, true)
 		if err != nil {
 			return err
 		}
@@ -435,16 +430,16 @@ func (s *AnggotaService) validasi(in DaftarAnggotaInput) (model.Anggota, error) 
 	return a, nil
 }
 
-func (s *AnggotaService) findAnggota(ctx context.Context, db database.DBTX, id int64, kunci bool) (model.Anggota, error) {
+func findAnggota(ctx context.Context, repo AnggotaRepo, db database.DBTX, id int64, kunci bool) (model.Anggota, error) {
 	var (
 		a   model.Anggota
 		err error
 	)
 
 	if kunci {
-		a, err = s.anggotaRepo.GetByIDForUpdate(ctx, db, id)
+		a, err = repo.GetByIDForUpdate(ctx, db, id)
 	} else {
-		a, err = s.anggotaRepo.GetByID(ctx, db, id)
+		a, err = repo.GetByID(ctx, db, id)
 	}
 
 	if errors.Is(err, repository.ErrTidakDitemukan) {

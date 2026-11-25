@@ -22,6 +22,9 @@ type TransaksiSimpanan struct {
 	TanggalTransaksi time.Time
 	Keterangan       string
 	DibuatOleh       int64
+
+	DibatalkanPada   *time.Time
+	AlasanPembatalan string
 }
 
 // SaldoSimpanan adalah saldo simpanan satu anggota per kategori

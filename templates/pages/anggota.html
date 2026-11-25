@@ -4,18 +4,22 @@
 
     <div class="anggota-heading">
         <div>
-            <h1>Data Anggota</h1>
-            <p class="anggota-subtitle">Master data anggota koperasi</p>
+            <h1>{{if eq .Path "/simpanan"}}Simpanan{{else}}Data Anggota{{end}}</h1>
+            <p class="anggota-subtitle">
+                {{if eq .Path "/simpanan"}}Pilih anggota untuk mencatat atau melihat simpanan{{else}}Master data anggota koperasi{{end}}
+            </p>
         </div>
 
+        {{if eq .Path "/anggota"}}
         <a href="/anggota/baru" class="btn anggota-add-btn">
             + Tambah Anggota
         </a>
+        {{end}}
     </div>
 
     <div class="anggota-card">
 
-        <form action="/anggota" method="GET" class="anggota-toolbar">
+        <form action="{{.Path}}" method="GET" class="anggota-toolbar">
             <div class="anggota-search">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="11" cy="11" r="7"/>
@@ -106,7 +110,7 @@
 
                         <td class="anggota-action">
                             <a
-                                href="/anggota/{{.ID}}"
+                                href="{{$.Path}}/{{.ID}}"
                                 class="anggota-detail-btn"
                             >
                                 Detail
@@ -133,7 +137,7 @@
             <nav class="anggota-pagination" aria-label="Navigasi halaman">
 
                 {{if gt .CurrentHalaman 1}}
-                    <a href="/anggota?page={{.HalamanPrev}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                    <a href="{{$.Path}}?page={{.HalamanPrev}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
                         ‹
                     </a>
                 {{else}}
@@ -144,14 +148,14 @@
                     {{if eq . $.CurrentHalaman}}
                         <span class="current">{{.}}</span>
                     {{else}}
-                        <a href="/anggota?page={{.}}&amp;q={{urlquery $.Cari}}&amp;status={{urlquery $.FilterStatus}}&amp;limit={{$.Limit}}">
+                        <a href="{{$.Path}}?page={{.}}&amp;q={{urlquery $.Cari}}&amp;status={{urlquery $.FilterStatus}}&amp;limit={{$.Limit}}">
                             {{.}}
                         </a>
                     {{end}}
                 {{end}}
 
                 {{if lt .CurrentHalaman .TotalHalaman}}
-                    <a href="/anggota?page={{.HalamanNext}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
+                    <a href="{{$.Path}}?page={{.HalamanNext}}&amp;q={{urlquery .Cari}}&amp;status={{urlquery .FilterStatus}}&amp;limit={{.Limit}}">
                         ›
                     </a>
                 {{else}}

@@ -7,7 +7,8 @@ Dipakai oleh pengurus (login), bukan oleh anggota.
 Dibuat dengan Go (hanya `net/http` dari pustaka standar + `html/template`) dan MySQL 8.
 
 > **Status:** cabang `develop`. Sudah ada: login, inti perhitungan (jadwal, denda, alokasi, pelunasan, dengan tes),
-> dan fitur **Anggota** lengkap (daftar, cari/filter, detail, ubah, keluar). Fitur **Anggota** adalah
+> fitur **Anggota** lengkap (daftar, cari/filter, detail, ubah, keluar), dan fitur **Simpanan** (setor wajib,
+> setor/tarik sukarela, saldo + riwayat, pembatalan transaksi). Fitur **Anggota** adalah
 > **contoh acuan**: fitur lain meniru polanya (lihat [Cara kerja kode](#cara-kerja-kode-ikuti-fitur-anggota)).
 
 ## Dokumen penting
