@@ -44,7 +44,7 @@ func RequireLogin(next http.Handler) http.Handler {
 	})
 }
 
-// CSRF menolat permintaan yang mengubah data
+// CSRF menolak permintaan yang mengubah data
 // (selain GET/HEAD/OPTIONS) bila token pada form tidak sama dengan token sesi
 func CSRF(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

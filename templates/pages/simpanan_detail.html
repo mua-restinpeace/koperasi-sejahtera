@@ -1,0 +1,162 @@
+{{define "content"}}
+<section class="page anggota-detail-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Simpanan {{.Anggota.NamaLengkap}}</h1>
+            <p class="anggota-form-subtitle">
+                No. anggota {{.Anggota.NomorAnggota}}
+                {{if ne .Anggota.Status "aktif"}}· <span class="anggota-badge anggota-badge-exit">Keluar</span>{{end}}
+            </p>
+        </div>
+
+        <a href="/simpanan" class="anggota-back-link">
+            ← Kembali ke Simpanan
+        </a>
+    </div>
+
+    {{if .Error}}
+    <div class="anggota-notice anggota-notice-danger">
+        {{range .Error}}<div>{{.}}</div>{{end}}
+    </div>
+    {{end}}
+
+    <div class="anggota-detail-grid">
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Saldo simpanan</h3>
+
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr><td>Simpanan pokok</td><td>{{rupiah .Saldo.Pokok}}</td></tr>
+                    <tr><td>Simpanan wajib</td><td>{{rupiah .Saldo.Wajib}}</td></tr>
+                    <tr><td>Simpanan sukarela</td><td>{{rupiah .Saldo.Sukarela}}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr><td>Total</td><td>{{rupiah .Saldo.Total}}</td></tr>
+                </tfoot>
+            </table>
+
+            <p class="anggota-detail-loan">
+                <a href="/anggota/{{.Anggota.ID}}" class="anggota-back-link">Lihat profil anggota</a>
+            </p>
+        </div>
+
+        {{if eq .Anggota.Status "aktif"}}
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Setor simpanan wajib</h3>
+            <p class="anggota-muted">Tetap {{rupiah .Wajib}} per bulan, satu bulan per setoran, tidak dapat dibayar di muka.</p>
+
+            <form method="POST" action="/simpanan/{{.Anggota.ID}}/wajib" class="anggota-form">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <div class="anggota-field">
+                    <label for="periode">Periode</label>
+                    <input id="periode" name="periode" type="month" value="{{.Hari.Format "2006-01"}}" max="{{.Hari.Format "2006-01"}}" required>
+                </div>
+
+                <button type="submit" class="btn anggota-save-btn">Catat {{rupiah .Wajib}}</button>
+            </form>
+        </div>
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Setor simpanan sukarela</h3>
+
+            <form method="POST" action="/simpanan/{{.Anggota.ID}}/setor" class="anggota-form">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <div class="anggota-field">
+                    <label for="setor_jumlah">Jumlah (Rp)</label>
+                    <input id="setor_jumlah" name="jumlah" type="text" inputmode="numeric" placeholder="mis. 250000" required>
+                </div>
+
+                <div class="anggota-field">
+                    <label for="setor_keterangan">Keterangan <span class="anggota-optional">(Opsional)</span></label>
+                    <input id="setor_keterangan" name="keterangan" type="text" maxlength="255">
+                </div>
+
+                <button type="submit" class="btn anggota-save-btn">Setor</button>
+            </form>
+        </div>
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Tarik simpanan sukarela</h3>
+            <p class="anggota-muted">Tidak boleh melebihi saldo sukarela ({{rupiah .Saldo.Sukarela}}).</p>
+
+            <form method="POST" action="/simpanan/{{.Anggota.ID}}/tarik" class="anggota-form">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <div class="anggota-field">
+                    <label for="tarik_jumlah">Jumlah (Rp)</label>
+                    <input id="tarik_jumlah" name="jumlah" type="text" inputmode="numeric" required>
+                </div>
+
+                <div class="anggota-field">
+                    <label for="tarik_keterangan">Keterangan <span class="anggota-optional">(Opsional)</span></label>
+                    <input id="tarik_keterangan" name="keterangan" type="text" maxlength="255">
+                </div>
+
+                <button type="submit" class="btn anggota-save-btn">Tarik</button>
+            </form>
+        </div>
+        {{end}}
+
+    </div>
+
+    <div class="anggota-card">
+        <h3 class="anggota-detail-title">Riwayat transaksi</h3>
+
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Kategori</th>
+                        <th>Jenis</th>
+                        <th>Jumlah</th>
+                        <th>Keterangan</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Transaksi}}
+                    <tr>
+                        <td>{{.TanggalTransaksi.Format "02-01-2006"}}</td>
+                        <td>{{.Kategori}}{{if .Periode}} ({{.Periode.Format "01-2006"}}){{end}}</td>
+                        <td>{{.TipeMutasi}}</td>
+                        <td>{{if .DibatalkanPada}}<s>{{rupiah .Jumlah}}</s>{{else}}{{rupiah .Jumlah}}{{end}}</td>
+                        <td>
+                            {{.Keterangan}}
+                            {{if .DibatalkanPada}}
+                                <span class="anggota-badge anggota-badge-exit">Dibatalkan</span>
+                                <span class="anggota-muted">{{.AlasanPembatalan}}</span>
+                            {{end}}
+                        </td>
+                        <td class="anggota-action">
+                            {{if and (not .DibatalkanPada) (ne .Kategori "pokok") (eq $.Anggota.Status "aktif")}}
+                            <details>
+                                <summary>Batalkan</summary>
+                                <form method="POST" action="/simpanan/transaksi/{{.ID}}/batal" class="anggota-form">
+                                    <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+                                    <div class="anggota-field">
+                                        <label for="alasan-{{.ID}}">Alasan pembatalan</label>
+                                        <input id="alasan-{{.ID}}" name="alasan" type="text" maxlength="255" required>
+                                    </div>
+                                    <button type="submit" class="btn anggota-danger-btn">Batalkan transaksi</button>
+                                </form>
+                            </details>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="6" class="anggota-empty">Belum ada transaksi.</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{{end}}
