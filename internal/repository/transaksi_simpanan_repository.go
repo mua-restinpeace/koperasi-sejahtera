@@ -127,3 +127,36 @@ func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64)
 
 	return hasil, petakanError(rows.Err(), "List transaksi simpanan")
 }
+
+// GetByIDForUpdate mengambil satu transaksi simpanan dan mengunci barisnya
+func (SimpananRepo) GetByIDForUpdate(ctx context.Context, db database.DBTX, id int64) (model.TransaksiSimpanan, error) {
+	query := `SELECT ` + kolomSimpanan + `FROM transaksi_simpanan WHERE id = ? FOR UPDATE`
+	row := db.QueryRowContext(ctx, query, id)
+	t, err := scanSimpanan(row)
+
+	return t, petakanError(err, "GetByIDForUpdate transaksi simpanan")
+}
+
+// Batalkan menandai transaksi sebagai dibatalkan
+// barisnya tidak dihapus
+func (SimpananRepo) Batalkan(ctx context.Context, db database.DBTX, id, oleh int64, alasan string, pada time.Time) error {
+	query := `UPDATE transaksi_simpanan
+		SET dibatalkan_pada = ?, dibatalkan_oleh = ?, alasan_pembatalan = ?
+		WHERE id = ? AND dibatalkan_pada IS NULL`
+
+	res, err := db.ExecContext(ctx, query, pada, oleh, alasan, id)
+	if err != nil {
+		return petakanError(err, "Batalkan transaksi smpanan")
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return petakanError(err, "Batalkan transaksi simpanan")
+	}
+
+	if n == 0 {
+		return ErrTidakDitemukan
+	}
+
+	return nil
+}

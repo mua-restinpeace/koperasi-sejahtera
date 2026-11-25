@@ -165,6 +165,85 @@ func siap(t *testing.T) (http.Handler, *fakeAuth, *fakeAnggota) {
 	return router.NewRouter(h, auth, log), auth, ang
 }
 
+type fakeSimpanan struct {
+	galat     error // dikembalikan seluruh aksi tulis
+	idBatal   int64 // ID anggota yang dikembalikan Batalkan
+	wajib     []service.SetorWajibInput
+	setor     []service.SukarelaInput
+	tarik     []service.SukarelaInput
+	dibatal   []int64
+	alasan    string
+	errBaca   error
+	anggota   model.Anggota
+	transaksi []model.TransaksiSimpanan
+}
+
+func (f *fakeSimpanan) Riwayat(_ context.Context, id int64) (service.RiwayatSimpanan, error) {
+	if f.errBaca != nil {
+		return service.RiwayatSimpanan{}, f.errBaca
+	}
+	a := anggotaUji()
+	if f.anggota.ID != 0 {
+		a = f.anggota
+	}
+	a.ID = id
+	return service.RiwayatSimpanan{
+		Anggota:   a,
+		Saldo:     model.SaldoSimpanan{Pokok: 500_000, Wajib: 1_200_000, Sukarela: 250_000},
+		Transaksi: f.transaksi,
+		Wajib:     100_000,
+		Hari:      time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC),
+	}, nil
+}
+
+func (f *fakeSimpanan) SetorWajib(_ context.Context, _ int64, in service.SetorWajibInput) error {
+	if f.galat != nil {
+		return f.galat
+	}
+	f.wajib = append(f.wajib, in)
+	return nil
+}
+
+func (f *fakeSimpanan) SetorSukarela(_ context.Context, _ int64, in service.SukarelaInput) error {
+	if f.galat != nil {
+		return f.galat
+	}
+	f.setor = append(f.setor, in)
+	return nil
+}
+
+func (f *fakeSimpanan) TarikSukarela(_ context.Context, _ int64, in service.SukarelaInput) error {
+	if f.galat != nil {
+		return f.galat
+	}
+	f.tarik = append(f.tarik, in)
+	return nil
+}
+
+func (f *fakeSimpanan) Batalkan(_ context.Context, id int64, alasan string) (int64, error) {
+	if f.galat != nil {
+		return f.idBatal, f.galat
+	}
+	f.dibatal = append(f.dibatal, id)
+	f.alasan = alasan
+	return 5, nil
+}
+
+func siapSimpanan(t *testing.T) (http.Handler, *fakeAnggota, *fakeSimpanan) {
+	t.Helper()
+	cfg := config.Default()
+	cfg.CookieSecure = true
+	auth, ang, sp := &fakeAuth{}, &fakeAnggota{}, &fakeSimpanan{idBatal: 5}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{Auth: auth, Anggota: ang, Simpanan: sp})
+	if err != nil {
+		t.Fatalf("handler.New: %v", err)
+	}
+	return router.NewRouter(h, auth, log), ang, sp
+}
+
+var formCSRF = url.Values{"csrf_token": {"csrf-ani"}}
+
 func kirim(h http.Handler, method, path string, form url.Values, cookie string) *httptest.ResponseRecorder {
 	var body io.Reader
 	if form != nil {
@@ -399,6 +478,163 @@ func TestKeluarAnggota(t *testing.T) {
 		ang.errKeluar = io.ErrUnexpectedEOF
 		if w := kirim(h, http.MethodPost, "/anggota/keluar/5", form, "token-ani"); w.Code != http.StatusInternalServerError || strings.Contains(w.Body.String(), "EOF") {
 			t.Errorf("status=%d body=%q", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestSimpanan_DaftarMenujuHalamanSimpanan(t *testing.T) {
+	h, ang, _ := siapSimpanan(t)
+	ang.hasilFilter = service.PaginatedAnggotaResponse{Data: []model.Anggota{anggotaUji()}, Total: 1}
+
+	w := kirim(h, http.MethodGet, "/simpanan", nil, "token-ani")
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, `href="/simpanan/5"`) || strings.Contains(body, "Tambah Anggota") {
+		t.Errorf("status=%d; baris harus menuju /simpanan/5 tanpa tombol Tambah Anggota", w.Code)
+	}
+
+	w = kirim(h, http.MethodGet, "/anggota", nil, "token-ani")
+	if !strings.Contains(w.Body.String(), `href="/anggota/5"`) || !strings.Contains(w.Body.String(), "Tambah Anggota") {
+		t.Error("daftar anggota berubah")
+	}
+}
+
+func TestSimpanan_Halaman(t *testing.T) {
+	h, _, sp := siapSimpanan(t)
+	sp.transaksi = []model.TransaksiSimpanan{
+		{ID: 1, Kategori: "pokok", TipeMutasi: "setor", Jumlah: 500_000, TanggalTransaksi: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)},
+		{ID: 2, Kategori: "sukarela", TipeMutasi: "setor", Jumlah: 250_000, TanggalTransaksi: time.Date(2026, 2, 5, 0, 0, 0, 0, time.UTC)},
+	}
+
+	w := kirim(h, http.MethodGet, "/simpanan/5?berhasil=tarik", nil, "token-ani")
+	body := w.Body.String()
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	for _, ingin := range []string{"Rp100.000", "Rp1.200.000", `action="/simpanan/5/wajib"`, `action="/simpanan/5/setor"`, `action="/simpanan/5/tarik"`,
+		`name="csrf_token" value="csrf-ani"`, `value="2026-11"`, "Penarikan simpanan sukarela berhasil dicatat", `action="/simpanan/transaksi/2/batal"`} {
+		if !strings.Contains(body, ingin) {
+			t.Errorf("halaman tidak memuat %q", ingin)
+		}
+	}
+	if strings.Contains(body, "/simpanan/transaksi/1/batal") {
+		t.Error("simpanan pokok tidak boleh punya tombol batal")
+	}
+	if strings.Contains(body, "<b>Aminah</b>") {
+		t.Error("nama anggota tidak di-escape")
+	}
+}
+
+func TestSimpanan_HalamanAnggotaKeluarTanpaForm(t *testing.T) {
+	h, _, sp := siapSimpanan(t)
+	sp.anggota = anggotaUji()
+	sp.anggota.Status = "keluar"
+	sp.transaksi = []model.TransaksiSimpanan{{ID: 2, Kategori: "sukarela", TipeMutasi: "setor", Jumlah: 1}}
+
+	body := kirim(h, http.MethodGet, "/simpanan/5", nil, "token-ani").Body.String()
+	if strings.Contains(body, "/simpanan/5/wajib") || strings.Contains(body, "/batal") {
+		t.Error("anggota keluar tidak boleh punya form setor/tarik/batal")
+	}
+}
+
+func TestSimpanan_Tulis(t *testing.T) {
+	t.Run("sukses: redirect dan isian diteruskan", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		cases := []struct {
+			path, kode string
+			form       url.Values
+		}{
+			{"/simpanan/5/wajib", "wajib", url.Values{"periode": {"2026-11"}}},
+			{"/simpanan/5/setor", "setor", url.Values{"jumlah": {"1.000"}, "keterangan": {"gaji"}}},
+			{"/simpanan/5/tarik", "tarik", url.Values{"jumlah": {"500"}}},
+		}
+		for _, c := range cases {
+			c.form.Set("csrf_token", "csrf-ani")
+			w := kirim(h, http.MethodPost, c.path, c.form, "token-ani")
+			if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/simpanan/5?berhasil="+c.kode {
+				t.Errorf("%s: status=%d location=%q", c.path, w.Code, w.Header().Get("Location"))
+			}
+		}
+		if len(sp.wajib) != 1 || sp.wajib[0].Periode != "2026-11" || len(sp.setor) != 1 || sp.setor[0].Jumlah != "1.000" || sp.setor[0].Keterangan != "gaji" || len(sp.tarik) != 1 {
+			t.Errorf("isian: %+v %+v %+v", sp.wajib, sp.setor, sp.tarik)
+		}
+	})
+
+	t.Run("tanpa token CSRF ditolak", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		w := kirim(h, http.MethodPost, "/simpanan/5/setor", url.Values{"jumlah": {"1000"}}, "token-ani")
+		if w.Code != http.StatusForbidden || len(sp.setor) != 0 {
+			t.Errorf("status=%d setor=%d", w.Code, len(sp.setor))
+		}
+	})
+
+	t.Run("tanpa login dialihkan", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		w := kirim(h, http.MethodPost, "/simpanan/5/setor", formCSRF, "")
+		if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/login" || len(sp.setor) != 0 {
+			t.Errorf("status=%d location=%q", w.Code, w.Header().Get("Location"))
+		}
+	})
+
+	t.Run("validasi gagal: 422 dengan pesan", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		sp.galat = &service.ValidasiError{Pesan: map[string]string{"jumlah": "Penarikan melebihi saldo PESAN-UJI"}}
+		w := kirim(h, http.MethodPost, "/simpanan/5/tarik", url.Values{"csrf_token": {"csrf-ani"}, "jumlah": {"9"}}, "token-ani")
+		if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "PESAN-UJI") {
+			t.Errorf("status=%d", w.Code)
+		}
+	})
+
+	t.Run("aturan bisnis: 409 dengan pesan", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		sp.galat = service.ErrAnggotaSudahKeluar
+		w := kirim(h, http.MethodPost, "/simpanan/5/wajib", formCSRF, "token-ani")
+		if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "sudah berstatus keluar") {
+			t.Errorf("status=%d", w.Code)
+		}
+	})
+
+	t.Run("tidak ada: 404; id jelek: 404; galat tak terduga: 500", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		sp.galat = service.ErrAnggotaTidakDitemukan
+		if w := kirim(h, http.MethodPost, "/simpanan/5/setor", formCSRF, "token-ani"); w.Code != http.StatusNotFound {
+			t.Errorf("tidak ada: %d", w.Code)
+		}
+		if w := kirim(h, http.MethodPost, "/simpanan/abc/setor", formCSRF, "token-ani"); w.Code != http.StatusNotFound {
+			t.Errorf("id jelek: %d", w.Code)
+		}
+		sp.galat = io.ErrUnexpectedEOF
+		if w := kirim(h, http.MethodPost, "/simpanan/5/setor", formCSRF, "token-ani"); w.Code != http.StatusInternalServerError || strings.Contains(w.Body.String(), "EOF") {
+			t.Errorf("tak terduga: %d %q", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestSimpanan_Batal(t *testing.T) {
+	t.Run("sukses kembali ke halaman anggota", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		w := kirim(h, http.MethodPost, "/simpanan/transaksi/9/batal", url.Values{"csrf_token": {"csrf-ani"}, "alasan": {"salah periode"}}, "token-ani")
+		if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/simpanan/5?berhasil=batal" {
+			t.Fatalf("status=%d location=%q", w.Code, w.Header().Get("Location"))
+		}
+		if len(sp.dibatal) != 1 || sp.dibatal[0] != 9 || sp.alasan != "salah periode" {
+			t.Errorf("dibatal=%v alasan=%q", sp.dibatal, sp.alasan)
+		}
+	})
+
+	t.Run("ditolak aturan: 409 pada halaman anggota", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		sp.galat = service.ErrPokokTidakBisaDibatalkan
+		w := kirim(h, http.MethodPost, "/simpanan/transaksi/9/batal", url.Values{"csrf_token": {"csrf-ani"}, "alasan": {"x"}}, "token-ani")
+		if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "simpanan pokok tidak dapat dibatalkan") {
+			t.Errorf("status=%d", w.Code)
+		}
+	})
+
+	t.Run("transaksi tidak ada: 404", func(t *testing.T) {
+		h, _, sp := siapSimpanan(t)
+		sp.galat = service.ErrTransaksiTidakDitemukan
+		if w := kirim(h, http.MethodPost, "/simpanan/transaksi/9/batal", formCSRF, "token-ani"); w.Code != http.StatusNotFound {
+			t.Errorf("status=%d", w.Code)
 		}
 	})
 }

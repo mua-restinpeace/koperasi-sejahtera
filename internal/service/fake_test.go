@@ -226,7 +226,21 @@ type fakeSimpanan struct {
 	kunciTrx int
 }
 
+func (f *fakeSimpanan) tambah(t model.TransaksiSimpanan) {
+	if f.data == nil {
+		f.data = map[int64]model.TransaksiSimpanan{}
+	}
+	f.data[t.ID] = t
+}
+
 func (f *fakeSimpanan) Create(_ context.Context, _ database.DBTX, t model.TransaksiSimpanan) (int64, error) {
+	if t.Kategori == model.SimpananWajib && t.TipeMutasi == model.MutasiSetor {
+		for _, d := range f.dibuat {
+			if d.IDAnggota == t.IDAnggota && d.Kategori == model.SimpananWajib && d.Periode.Equal(*t.Periode) {
+				return 0, repository.ErrDuplikat
+			}
+		}
+	}
 	f.dibuat = append(f.dibuat, t)
 	return int64(len(f.dibuat)), nil
 }
@@ -243,6 +257,24 @@ func (f *fakeSimpanan) List(_ context.Context, _ database.DBTX, idAnggota int64)
 		}
 	}
 	return hasil, nil
+}
+
+func (f *fakeSimpanan) GetByIDForUpdate(_ context.Context, _ database.DBTX, id int64) (model.TransaksiSimpanan, error) {
+	f.kunciTrx++
+	t, ok := f.data[id]
+	if !ok {
+		return model.TransaksiSimpanan{}, repository.ErrTidakDitemukan
+	}
+	return t, nil
+}
+
+func (f *fakeSimpanan) Batalkan(_ context.Context, _ database.DBTX, id, _ int64, alasan string, _ time.Time) error {
+	if f.errBatal != nil {
+		return f.errBatal
+	}
+	f.batal = append(f.batal, id)
+	f.alasan = alasan
+	return nil
 }
 
 type fakePinjamanAktif struct{ aktif bool }
