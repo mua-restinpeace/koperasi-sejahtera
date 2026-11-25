@@ -76,6 +76,14 @@ func successMessage(kode string) string {
 		return "Data anggota berhasil diubah"
 	case "keluar":
 		return "Anggota berhasil dikeluarkan dan simpanannya dicatat sebagai dikembalikan"
+	case "wajib":
+		return "Setoran simpanan wajib berhasil dicatat"
+	case "setor":
+		return "Setoran simpanan sukarela berhasil dicatat"
+	case "tarik":
+		return "Penarikan simpanan sukarela berhasil dicatat"
+	case "batal":
+		return "Transaksi simpanan berhasil dibatalkan"
 	default:
 		return ""
 	}
