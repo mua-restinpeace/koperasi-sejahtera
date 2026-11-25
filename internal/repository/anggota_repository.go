@@ -130,8 +130,8 @@ func (AnggotaRepo) Deactivate(ctx context.Context, db database.DBTX, id int64, t
 }
 
 // HELPER //
-// pemindai adalah bagian dari *sql.Row dan *sql.Rows yang dipakai untuk membaca satu baris.
-type pemindai interface {
+// scanner adalah bagian dari *sql.Row dan *sql.Rows yang dipakai untuk membaca satu baris.
+type scanner interface {
 	Scan(dest ...any) error
 }
 
@@ -147,7 +147,7 @@ func scanOne(ctx context.Context, db database.DBTX, query string, id int64, kont
 
 // scanAnggota membaca satu baris anggota (kolom sesuai kolomAnggota). Bila total tidak nil,
 // kolom tambahan COUNT(*) OVER() di ujung baris ikut dibaca ke sana.
-func scanAnggota(p pemindai, total *int) (model.Anggota, error) {
+func scanAnggota(p scanner, total *int) (model.Anggota, error) {
 	var (
 		a       model.Anggota
 		telepon sql.NullString

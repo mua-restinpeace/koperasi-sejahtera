@@ -216,7 +216,14 @@ func (f *fakeAnggota) Deactivate(_ context.Context, _ database.DBTX, id int64, t
 
 type fakeSimpanan struct {
 	dibuat []model.TransaksiSimpanan
-	saldo  model.SaldoSimpanan
+	saldo  model.SaldoSimpanan // dikembalikan apa adanya oleh Saldo
+
+	// data dipakai GetByIDForUpdate dan List; isi lewat tambah.
+	data     map[int64]model.TransaksiSimpanan
+	batal    []int64 // ID transaksi yang dibatalkan
+	alasan   string
+	errBatal error
+	kunciTrx int
 }
 
 func (f *fakeSimpanan) Create(_ context.Context, _ database.DBTX, t model.TransaksiSimpanan) (int64, error) {
@@ -226,6 +233,16 @@ func (f *fakeSimpanan) Create(_ context.Context, _ database.DBTX, t model.Transa
 
 func (f *fakeSimpanan) Saldo(context.Context, database.DBTX, int64) (model.SaldoSimpanan, error) {
 	return f.saldo, nil
+}
+
+func (f *fakeSimpanan) List(_ context.Context, _ database.DBTX, idAnggota int64) ([]model.TransaksiSimpanan, error) {
+	var hasil []model.TransaksiSimpanan
+	for _, t := range f.data {
+		if t.IDAnggota == idAnggota {
+			hasil = append(hasil, t)
+		}
+	}
+	return hasil, nil
 }
 
 type fakePinjamanAktif struct{ aktif bool }

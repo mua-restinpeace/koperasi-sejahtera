@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/database"
@@ -77,3 +78,53 @@ func (SimpananRepo) Saldo(ctx context.Context, db database.DBTX, idAnggota int64
 
 	return saldo, petakanError(rows.Err(), "Saldo simpanan")
 }
+
+const kolomSimpanan = `id, id_anggota, kategori, tipe_mutasi, jumlah, periode, tanggal_transaksi,
+	COALESCE(keterangan, ''), dibuat_oleh, dibatalkan_pada, COALESCE(alasan_pembatalan, '')`
+
+func scanSimpanan(row scanner) (model.TransaksiSimpanan, error) {
+	var (
+		t       model.TransaksiSimpanan
+		periode sql.NullTime
+		batal   sql.NullTime
+	)
+
+	err := row.Scan(&t.ID, &t.IDAnggota, &t.Kategori, &t.TipeMutasi, &t.Jumlah, &periode,
+		&t.TanggalTransaksi, &t.Keterangan, &t.DibuatOleh, &batal, &t.AlasanPembatalan)
+	if err != nil {
+		return model.TransaksiSimpanan{}, err
+	}
+
+	if periode.Valid {
+		t.Periode = &periode.Time
+	}
+	if batal.Valid {
+		t.DibatalkanPada = &batal.Time
+	}
+
+	return t, nil
+}
+
+// List mengambil seluruh riwayat simpanan satu anggota
+func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64) ([]model.TransaksiSimpanan, error){
+	query := `SELECT ` + kolomSimpanan + ` FROM transaksi_simpanan
+			WHERE id_anggota = ? ORDER BY tanggal_transaksi DESC, id DESC`
+	rows, err := db.QueryContext(ctx, query, idAnggota)
+	if err != nil {
+		return nil, petakanError(err, "List transaksi simpanan")
+	}
+	defer rows.Close()
+
+	var hasil []model.TransaksiSimpanan
+	for rows.Next(){
+		t, err := scanSimpanan(rows)
+		if err != nil {
+			return  nil, petakanError(err, "scan transaksi simpanan")
+		}
+
+		hasil = append(hasil, t)
+	}
+
+	return hasil, petakanError(rows.Err(), "List transaksi simpanan")
+}
+

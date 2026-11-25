@@ -58,10 +58,12 @@ func run(log *slog.Logger) error {
 	auditSvc := service.NewAuditService(repository.AuditRepo{})
 	authService := service.NewAuthService(sumber, repository.PenggunaRepo{}, repository.SesiRepo{}, service.HasherPBKDF2{}, time.Duration(cfg.SesiJam)*time.Hour, nil, log)
 	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, repository.PinjamanRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
+	simpananSvc := service.NewSimpananService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, auditSvc, cfg.SimpananWajib, zona, nil)
 
 	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
 		Auth:    authService,
 		Anggota: anggotaSvc,
+		Simpanan: simpananSvc,
 	})
 
 	if err != nil {

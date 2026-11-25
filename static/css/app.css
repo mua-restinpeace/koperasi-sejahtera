@@ -1218,6 +1218,7 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
+  margin-bottom: 16px;
 }
 
 .anggota-detail-title {
