@@ -19,7 +19,7 @@ type dataSimpanan struct {
 }
 
 // GetSimpanan menampilkan saldo, form setor/tarik, dan riwayat satu anggota
-func (h *Handler) GetSimpanan(w http.ResponseWriter, r *http.Request){
+func (h *Handler) GetSimpanan(w http.ResponseWriter, r *http.Request) {
 	id, ok := idDariPath(r)
 	if !ok {
 		h.notFound(w)
@@ -29,8 +29,7 @@ func (h *Handler) GetSimpanan(w http.ResponseWriter, r *http.Request){
 	h.halamanSimpanan(w, r, id, http.StatusOK, nil, successMessage(r.URL.Query().Get("berhasil")))
 }
 
-
-func (h *Handler) halamanSimpanan(w http.ResponseWriter, r *http.Request, id int64, status int, galat map[string]string, pesan string){
+func (h *Handler) halamanSimpanan(w http.ResponseWriter, r *http.Request, id int64, status int, galat map[string]string, pesan string) {
 	d, err := h.svc.Simpanan.Riwayet(r.Context(), id)
 	switch {
 	case errors.Is(err, service.ErrAnggotaTidakDitemukan):
@@ -41,9 +40,9 @@ func (h *Handler) halamanSimpanan(w http.ResponseWriter, r *http.Request, id int
 		hal := h.halaman(r, "Simpanan Anggota", "simpanan")
 		hal.Pesan = pesan
 		h.render(w, status, "pages/simpanan_detail.html", dataSimpanan{
-			Halaman: hal,
+			Halaman:         hal,
 			RiwayatSimpanan: d,
-			Error: galat,
+			Error:           galat,
 		})
 	}
 }

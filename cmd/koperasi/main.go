@@ -61,8 +61,8 @@ func run(log *slog.Logger) error {
 	simpananSvc := service.NewSimpananService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, auditSvc, cfg.SimpananWajib, zona, nil)
 
 	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
-		Auth:    authService,
-		Anggota: anggotaSvc,
+		Auth:     authService,
+		Anggota:  anggotaSvc,
 		Simpanan: simpananSvc,
 	})
 

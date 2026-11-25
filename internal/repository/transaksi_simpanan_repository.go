@@ -106,7 +106,7 @@ func scanSimpanan(row scanner) (model.TransaksiSimpanan, error) {
 }
 
 // List mengambil seluruh riwayat simpanan satu anggota
-func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64) ([]model.TransaksiSimpanan, error){
+func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64) ([]model.TransaksiSimpanan, error) {
 	query := `SELECT ` + kolomSimpanan + ` FROM transaksi_simpanan
 			WHERE id_anggota = ? ORDER BY tanggal_transaksi DESC, id DESC`
 	rows, err := db.QueryContext(ctx, query, idAnggota)
@@ -116,10 +116,10 @@ func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64)
 	defer rows.Close()
 
 	var hasil []model.TransaksiSimpanan
-	for rows.Next(){
+	for rows.Next() {
 		t, err := scanSimpanan(rows)
 		if err != nil {
-			return  nil, petakanError(err, "scan transaksi simpanan")
+			return nil, petakanError(err, "scan transaksi simpanan")
 		}
 
 		hasil = append(hasil, t)
@@ -127,4 +127,3 @@ func (SimpananRepo) List(ctx context.Context, db database.DBTX, idAnggota int64)
 
 	return hasil, petakanError(rows.Err(), "List transaksi simpanan")
 }
-
