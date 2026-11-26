@@ -47,7 +47,8 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 	}
 
 	funcs := template.FuncMap{
-		"rupiah": helper.FormatRupiah,
+		"rupiah":  helper.FormatRupiah,
+		"inisial": helper.Inisial,
 	}
 
 	tmpl := make(map[string]*template.Template, len(pages))

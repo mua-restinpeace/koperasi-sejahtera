@@ -4,9 +4,12 @@ import (
 	"net/http"
 )
 
-// Beranda menampilkan halaman awal.
+// Beranda menampilkan dashboard. Sementara memakai data contoh sampai service
+// laporan tersedia (lihat contohDashboard di dashboard_view.go).
 func (h *Handler) Beranda(w http.ResponseWriter, r *http.Request) {
-	h.render(w, http.StatusOK, "pages/dashboard.html", h.halaman(r, "Dashboard", "dashboard"))
+	d := contohDashboard()
+	d.Halaman = h.halaman(r, "Dashboard", "dashboard")
+	h.render(w, http.StatusOK, "pages/dashboard.html", d)
 }
 
 // Healthz dipakai untuk pengecekan bahwa server hidup.
