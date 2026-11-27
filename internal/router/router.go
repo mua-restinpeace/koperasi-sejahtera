@@ -56,8 +56,8 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("GET /anggota/baru", r.h.FormAnggota)
 	r.Protected("POST /anggota", r.h.SimpanAnggota)
 	r.Protected("GET /anggota/{id}", r.h.DetailAnggota)
-	r.Protected("GET /anggota/update/{id}", r.h.FormUpdate)
-	r.Protected("POST /anggota/update/{id}", r.h.SaveUpdateAnggota)
+	r.Protected("GET /anggota/ubah/{id}", r.h.FormUpdate)
+	r.Protected("POST /anggota/ubah/{id}", r.h.SaveUpdateAnggota)
 	r.Protected("GET /anggota/keluar/{id}", r.h.FormAnggoaResign)
 	r.Protected("POST /anggota/keluar/{id}", r.h.AnggotaResign)
 
