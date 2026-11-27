@@ -31,4 +31,6 @@ func (s StatusAngsuran) SisaPokok() int64 { return s.Pokok - s.PokokDibayar }
 // jasa yang masih ditagihkan
 func (s StatusAngsuran) SisaJasa() int64 { return s.Jasa - s.JasaDibayar - s.JasaDihapus }
 
+func (s StatusAngsuran) TotalDibayar() int64 { return s.PokokDibayar + s.JasaDibayar }
+
 func (s StatusAngsuran) IsLunas() bool { return s.SisaPokok() == 0 && s.SisaJasa() == 0 }
