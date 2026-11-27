@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -223,8 +224,8 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 		pesan["nama_lengkap"] = "maksimal 100 karakter"
 	}
 
-	if utf8.RuneCountInString(telepon) > 20 {
-		pesan["no_telepon"] = "maksimal 20 karakter"
+	if p := validasiTelepon(telepon); p != "" {
+		pesan["no_telepon"] = p
 	}
 
 	if len(pesan) > 0 {
@@ -232,7 +233,7 @@ func (s *AnggotaService) Update(ctx context.Context, id int64, in UpdateAnggotaI
 	}
 
 	err := s.db.DenganTx(ctx, func(tx database.DBTX) error {
-		old, err := findAnggota(ctx, s.anggotaRepo, s.db, id, true)
+		old, err := findAnggota(ctx, s.anggotaRepo, tx, id, true)
 		if err != nil {
 			return err
 		}
@@ -407,8 +408,8 @@ func (s *AnggotaService) validasi(in DaftarAnggotaInput) (model.Anggota, error) 
 		pesan["nama_lengkap"] = "maksimal 100 karakter"
 	}
 
-	if utf8.RuneCountInString(a.NoTelepon) > 20 {
-		pesan["no_telepon"] = "maksimal 20 karakter"
+	if p := validasiTelepon(a.NoTelepon); p != "" {
+		pesan["no_telepon"] = p
 	}
 
 	d := s.FormatTanggal()
@@ -428,6 +429,23 @@ func (s *AnggotaService) validasi(in DaftarAnggotaInput) (model.Anggota, error) 
 	}
 
 	return a, nil
+}
+
+var polaTelepon = regexp.MustCompile(`^\+?[0-9][0-9 -]*$`)
+
+// validasiTelepon mengembalikan pesan kesalahan,
+// aau "" bila nomer valid
+func validasiTelepon(telepon string) string {
+	switch {
+	case telepon == "":
+		return ""
+	case utf8.RuneCountInString(telepon) > 20:
+		return "maksimal 20 karakter"
+	case !polaTelepon.MatchString(telepon):
+		return "hanya boleh berisi angka, spasi, tanda hubung, dan awalan +"
+	}
+
+	return ""
 }
 
 func findAnggota(ctx context.Context, repo AnggotaRepo, db database.DBTX, id int64, kunci bool) (model.Anggota, error) {

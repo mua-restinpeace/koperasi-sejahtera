@@ -10,7 +10,7 @@
             </p>
         </div>
 
-        <a href="/anggota/detail/{{.Anggota.ID}}" class="anggota-back-link">
+        <a href="/anggota/{{.Anggota.ID}}" class="anggota-back-link">
             ← Kembali ke Detail
         </a>
     </div>
@@ -22,7 +22,7 @@
             <p>Nomor anggota dan tanggal bergabung tidak dapat diubah.</p>
         </div>
 
-        <form method="POST" action="/anggota/update/{{.Anggota.ID}}" class="anggota-form">
+        <form method="POST" action="/anggota/ubah/{{.Anggota.ID}}" class="anggota-form">
 
             <input
                 type="hidden"
@@ -72,6 +72,9 @@
                     id="no_telepon"
                     name="no_telepon"
                     type="tel"
+                    inputmode="tel"
+                    pattern="^\+?[0-9][0-9 -]*$"
+                    title="Hanya angka, spasi, tanda hubung, dan awalan +"
                     value="{{.Isian.NoTelepon}}"
                     maxlength="20"
                     autocomplete="tel"
@@ -88,7 +91,7 @@
             </div>
 
             <div class="anggota-form-actions">
-                <a href="/anggota/detail/{{.Anggota.ID}}" class="anggota-cancel-btn">
+                <a href="/anggota/{{.Anggota.ID}}" class="anggota-cancel-btn">
                     Batal
                 </a>
 
