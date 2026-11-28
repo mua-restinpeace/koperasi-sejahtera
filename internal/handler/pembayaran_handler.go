@@ -16,24 +16,6 @@ type HalamanDetailPinjaman struct {
 	Error  map[string]string
 }
 
-// DetailPinjaman menampilkan informasi pinjaman dan riwayat pembayarannya.
-func (h *Handler) DetailPinjaman(w http.ResponseWriter, r *http.Request) {
-	id, ok := idDariPath(r)
-	if !ok {
-		h.notFound(w)
-		return
-	}
-
-	h.halamanDetailPinjaman(
-		w,
-		r,
-		id,
-		http.StatusOK,
-		nil,
-		pesanBerhasilPembayaran(r.URL.Query().Get("berhasil")),
-	)
-}
-
 // CatatPembayaran mencatat pembayaran angsuran.
 func (h *Handler) CatatPembayaran(w http.ResponseWriter, r *http.Request) {
 	id, ok := idDariPath(r)
@@ -111,27 +93,14 @@ func (h *Handler) halamanDetailPinjaman(
 	galat map[string]string,
 	pesan string,
 ) {
-	detail, err := h.svc.Pembayaran.GetDetailPinjaman(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, service.ErrPinjamanTidakDitemukan) {
-			h.notFound(w)
-			return
-		}
-
-		h.error(w, r, err)
-		return
-	}
-
-	hal := h.halaman(r, "Detail Pinjaman", "pinjaman")
-	hal.Pesan = pesan
-
-	data := HalamanDetailPinjaman{
-		Halaman: hal,
-		Detail:  detail,
-		Error:   galat,
-	}
-
-	h.render(w, status, "pages/pinjaman_detail.html", data)
+	h.renderDetailPinjaman(
+		w,
+		r,
+		id,
+		status,
+		galat,
+		pesan,
+	)
 }
 
 // hasilPembayaran menangani hasil transaksi pembayaran.

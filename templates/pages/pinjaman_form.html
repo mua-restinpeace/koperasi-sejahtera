@@ -1,0 +1,118 @@
+{{define "content"}}
+<section class="page anggota-form-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Pengajuan Pinjaman Baru</h1>
+            <p class="anggota-form-subtitle">Formulir pencairan pinjaman dan pembuatan jadwal angsuran</p>
+        </div>
+
+        <a href="/pinjaman" class="anggota-back-link">
+            ← Kembali ke Daftar Pinjaman
+        </a>
+    </div>
+
+    {{if .Error}}
+    <div class="anggota-notice anggota-notice-danger" style="margin-bottom: 20px;">
+        {{.Error}}
+    </div>
+    {{end}}
+
+    <div class="anggota-detail-grid">
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Formulir Pinjaman</h3>
+
+            <form method="POST" action="/pinjaman" class="anggota-form">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <div class="anggota-field">
+                    <label for="id_anggota">Pilih Anggota Peminjam *</label>
+                    <select id="id_anggota" name="id_anggota" required onchange="window.location.href='/pinjaman/baru?id_anggota=' + this.value">
+                        <option value="">-- Pilih Anggota Aktif --</option>
+                        {{range .DaftarAnggota}}
+                            <option value="{{.ID}}" {{if eq .ID $.Isian.IDAnggota}}selected{{end}}>
+                                {{.NomorAnggota}} - {{.NamaLengkap}}
+                            </option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <div class="anggota-field">
+                    <label for="jumlah">Jumlah Pinjaman (Rp) *</label>
+                    <input
+                        id="jumlah"
+                        name="jumlah"
+                        type="text"
+                        placeholder="Contoh: 3.000.000"
+                        value="{{.Isian.Jumlah}}"
+                        required
+                    >
+                    {{if .BatasPinjaman}}
+                        <small class="anggota-form-note">Maksimal batas pinjaman: <strong>{{rupiah .BatasPinjaman}}</strong></small>
+                    {{end}}
+                </div>
+
+                <div class="anggota-field">
+                    <label for="tenor">Tenor (Bulan) *</label>
+                    <select id="tenor" name="tenor" required>
+                        <option value="6" {{if eq .Isian.Tenor 6}}selected{{end}}>6 Bulan</option>
+                        <option value="12" {{if eq .Isian.Tenor 12}}selected{{end}}>12 Bulan</option>
+                        <option value="18" {{if eq .Isian.Tenor 18}}selected{{end}}>18 Bulan</option>
+                        <option value="24" {{if eq .Isian.Tenor 24}}selected{{end}}>24 Bulan</option>
+                    </select>
+                    <small class="anggota-form-note">Jasa flat 1% per bulan. Tanggal jatuh tempo otomatis tanggal 10 tiap bulan.</small>
+                </div>
+
+                <div class="anggota-field">
+                    <label for="tanggal_pencairan">Tanggal Pencairan *</label>
+                    <input
+                        id="tanggal_pencairan"
+                        name="tanggal_pencairan"
+                        type="date"
+                        value="{{.Isian.TanggalPencairan}}"
+                        required
+                    >
+                </div>
+
+                <div class="anggota-form-actions">
+                    <a href="/pinjaman" class="btn anggota-cancel-btn">Batal</a>
+                    <button type="submit" class="btn anggota-save-btn">Cairkan Pinjaman</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Informasi Batas Pinjaman</h3>
+            {{if .AnggotaTerpilih}}
+                <table class="anggota-saldo-table">
+                    <tbody>
+                        <tr><td>Peminjam</td><td><strong>{{.AnggotaTerpilih.NamaLengkap}}</strong></td></tr>
+                        <tr><td>No. Anggota</td><td>{{.AnggotaTerpilih.NomorAnggota}}</td></tr>
+                        <tr><td>Simpanan Pokok</td><td>{{rupiah .SaldoSimpanan.Pokok}}</td></tr>
+                        <tr><td>Simpanan Wajib</td><td>{{rupiah .SaldoSimpanan.Wajib}}</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>Batas Maksimal (3x Pokok+Wajib)</td>
+                            <td style="color: #2e7d32;">{{rupiah .BatasPinjaman}}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            {{else}}
+                <p class="anggota-muted">Pilih anggota peminjam pada formulir di sebelah kiri untuk melihat saldo simpanan dan batas maksimal pinjaman yang diizinkan.</p>
+            {{end}}
+
+            <div style="margin-top: 24px; padding: 12px; background: var(--bg2); border-radius: 8px;">
+                <h4 style="font-size: 13px; margin-bottom: 6px;">Ketentuan Pinjaman:</h4>
+                <ul style="font-size: 12px; color: var(--tx2); padding-left: 18px; line-height: 1.6;">
+                    <li>Anggota wajib berstatus <strong>Aktif</strong>.</li>
+                    <li>Satu anggota hanya boleh memiliki <strong>1 pinjaman aktif</strong>.</li>
+                    <li>Jasa koperasi: <strong>1% per bulan (flat)</strong>.</li>
+                    <li>Denda keterlambatan: <strong>Rp2.000 / hari</strong> setelah tanggal 10.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</section>
+{{end}}

@@ -75,11 +75,28 @@ func run(log *slog.Logger) error {
 	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, repository.PinjamanRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
 	simpananSvc := service.NewSimpananService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, auditSvc, cfg.SimpananWajib, zona, nil)
 
+	pinjamanSvc := service.NewPinjamanService(
+		sumber,
+		repository.PinjamanRepo{},
+		repository.AnggotaRepo{},
+		repository.SimpananRepo{},
+		auditSvc,
+		cfg.KelipatanBatasPinjam,
+		cfg.TenorMin,
+		cfg.TenorMax,
+		cfg.JasaBps,
+		cfg.DendaPerHari,
+		cfg.BiayaAdminBps,
+		zona,
+		nil,
+	)
+
 	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
-		Auth:       authService,
-		Anggota:    anggotaSvc,
-		Simpanan:   simpananSvc,
-		Pembayaran: pembayaranSvc,
+                Auth:       authService,
+                Anggota:    anggotaSvc,
+                Simpanan:   simpananSvc,
+                Pinjaman:   pinjamanSvc,
+                Pembayaran: pembayaranSvc,
 	})
 
 	if err != nil {

@@ -18,7 +18,6 @@ var (
 	ErrPembayaranTidakDitemukan  = errors.New("pembayaran tidak ditemukan")
 	ErrPembayaranSudahDibatalkan = errors.New("pembayaran sudah dibatalkan")
 	ErrPinjamanTidakAktif        = errors.New("pinjaman tidak aktif")
-	ErrPinjamanTidakDitemukan    = errors.New("pinjaman tidak ditemukan")
 )
 
 const maksPembayaran = int64(1_000_000_000)
@@ -73,7 +72,7 @@ type PembayaranPinjamanRepository interface {
 		ctx context.Context,
 		db database.DBTX,
 		idPinjaman int64,
-	) (model.Pinjaman, error)
+	) (model.PinjamanListItem, error)
 
 	KunciAktif(
 		ctx context.Context,
@@ -500,7 +499,7 @@ func (s *PembayaranService) GetDetailPinjaman(
 		}
 
 		hasil = DetailPinjaman{
-			Pinjaman:          pinjaman,
+			Pinjaman:          pinjaman.Pinjaman,
 			Angsuran:          statusAngsuran,
 			RiwayatPembayaran: riwayat,
 		}
