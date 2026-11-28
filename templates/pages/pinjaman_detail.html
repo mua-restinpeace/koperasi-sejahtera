@@ -5,7 +5,7 @@
         <div>
             <h1>Pinjaman #{{.Detail.ID}} - {{.Detail.NamaAnggota}}</h1>
             <p class="anggota-form-subtitle">
-                No. Anggota: {{.Detail.NomorAnggota}} · Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}} ·
+                No. Anggota: {{.Detail.NomorAnggota}} &middot; Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}} &middot;
                 {{if eq .Detail.Status "aktif"}}
                     <span class="anggota-badge anggota-badge-active">Aktif</span>
                 {{else if eq .Detail.Status "lunas"}}
@@ -17,11 +17,18 @@
         </div>
 
         <a href="/pinjaman" class="anggota-back-link">
-            ← Kembali ke Daftar Pinjaman
+            &larr; Kembali ke Daftar Pinjaman
         </a>
     </div>
 
-    <div class="anggota-detail-grid">
+{{if .Error}}
+    <div class="anggota-card">
+        {{range $field, $pesan := .Error}}
+        <p class="anggota-muted">{{$pesan}}</p>
+        {{end}}
+    </div>
+{{end}}
+<div class="anggota-detail-grid">
         <div class="anggota-card">
             <h3 class="anggota-detail-title">Ringkasan Pinjaman</h3>
             <table class="anggota-saldo-table">
@@ -62,8 +69,7 @@
         </div>
         {{end}}
     </div>
-
-    <div class="anggota-card" style="margin-top: 24px;">
+<div class="anggota-card" style="margin-top: 24px;">
         <h3 class="anggota-detail-title">Jadwal Angsuran</h3>
         <div class="anggota-table-wrapper">
             <table class="anggota-table">
@@ -108,6 +114,104 @@
             </table>
         </div>
     </div>
+
+<!-- RIWAYAT PEMBAYARAN -->
+    <div class="anggota-card">
+        <h3 class="anggota-detail-title">Riwayat Pembayaran</h3>
+
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Jenis</th>
+                        <th>Jumlah</th>
+                        <th>Biaya Administrasi</th>
+                        <th>Keterangan</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {{range .Pembayaran.RiwayatPembayaran}}
+                    <tr>
+                        <td>{{.TanggalBayar.Format "02-01-2006"}}</td>
+                        <td>{{.Jenis}}</td>
+
+                        <td>
+                            {{if .DibatalkanPada}}
+                            <s>{{rupiah .Jumlah}}</s>
+                            {{else}}
+                            {{rupiah .Jumlah}}
+                            {{end}}
+                        </td>
+
+                        <td>{{rupiah .BiayaAdmin}}</td>
+
+                        <td>
+                            {{.Keterangan}}
+                            {{if .DibatalkanPada}}
+                            <p class="anggota-muted">
+                                {{.AlasanPembatalan}}
+                            </p>
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if .DibatalkanPada}}
+                            <span class="anggota-badge anggota-badge-exit">
+                                Dibatalkan
+                            </span>
+                            {{else}}
+                            <span class="anggota-badge">Berhasil</span>
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if not .DibatalkanPada}}
+                            <form method="POST"
+                                action="/pinjaman/{{$.Pembayaran.Pinjaman.ID}}/pembayaran/{{.ID}}/batal"
+                                class="payment-cancel-form">
+
+                                <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+
+                                <label for="alasan-{{.ID}}" class="payment-cancel-label">
+                                    Alasan Pembatalan
+                                </label>
+
+                                <div class="payment-cancel-controls">
+                                    <input
+                                        id="alasan-{{.ID}}"
+                                        name="alasan"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Masukkan alasan"
+                                        required
+                                        class="payment-cancel-input">
+
+                                    <button type="submit" class="btn payment-cancel-button">
+                                        Batalkan
+                                    </button>
+                                </div>
+                            </form>
+                            {{else}}
+                            <span class="anggota-muted">-</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="7" class="anggota-empty">
+                            Belum ada riwayat pembayaran.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 
 </section>
 {{end}}

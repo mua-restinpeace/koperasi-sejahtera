@@ -21,10 +21,11 @@ type Handler struct {
 }
 
 type Service struct {
-	Auth     AuthService
-	Anggota  AnggotaService
-	Simpanan SimpananService
-	Pinjaman PinjamanService
+	Auth       AuthService
+	Anggota    AnggotaService
+	Simpanan   SimpananService
+	Pinjaman   PinjamanService
+	Pembayaran PembayaranService
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang

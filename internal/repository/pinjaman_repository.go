@@ -81,7 +81,7 @@ func (PinjamanRepo) Create(ctx context.Context, db database.DBTX, p model.Pinjam
 // GetByID mengambil satu data pinjaman berdasarkan ID beserta data anggotanya.
 func (PinjamanRepo) GetByID(ctx context.Context, db database.DBTX, id int64) (model.PinjamanListItem, error) {
 	query := `
-		SELECT 
+		SELECT
 			p.id, p.id_anggota, p.jumlah_pinjaman, p.tenor_bulan, p.jasa_per_bulan_bps,
 			p.denda_per_hari, p.tanggal_pencairan, p.status, p.tanggal_lunas, p.dibuat_oleh, p.dibuat_pada,
 			a.nomor_anggota, a.nama_lengkap
@@ -125,7 +125,7 @@ func (PinjamanRepo) GetByID(ctx context.Context, db database.DBTX, id int64) (mo
 // List mengambil daftar pinjaman, dapat difilter berdasarkan status (aktif, lunas, atau kosong untuk semua).
 func (PinjamanRepo) List(ctx context.Context, db database.DBTX, status string) ([]model.PinjamanListItem, error) {
 	query := `
-		SELECT 
+		SELECT
 			p.id, p.id_anggota, p.jumlah_pinjaman, p.tenor_bulan, p.jasa_per_bulan_bps,
 			p.denda_per_hari, p.tanggal_pencairan, p.status, p.tanggal_lunas, p.dibuat_oleh, p.dibuat_pada,
 			a.nomor_anggota, a.nama_lengkap
@@ -220,7 +220,7 @@ func (PinjamanRepo) GetJadwalByPinjamanID(ctx context.Context, db database.DBTX,
 // GetStatusAngsuranByPinjamanID mengambil jadwal angsuran beserta realisasi pembayaran dan perhitungan denda terutang.
 func (PinjamanRepo) GetStatusAngsuranByPinjamanID(ctx context.Context, db database.DBTX, idPinjaman int64, dendaPerHari int64, asOf time.Time) ([]model.StatusAngsuran, error) {
 	query := `
-		SELECT 
+		SELECT
 			a.id, a.id_pinjaman, a.urutan, a.tanggal_jatuh_tempo, a.pokok_tagihan, a.jasa_tagihan,
 			COALESCE(SUM(al.pokok_dibayar), 0) AS pokok_dibayar,
 			COALESCE(SUM(al.jasa_dibayar), 0) AS jasa_dibayar,
@@ -313,4 +313,71 @@ func (PinjamanRepo) GetPembayaranByPinjamanID(ctx context.Context, db database.D
 	}
 
 	return hasil, nil
+}
+
+// KunciAktif mengambil dan mengunci baris pinjaman aktif.
+// Harus dijalankan dalam transaksi database.
+func (PinjamanRepo) KunciAktif(
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
+) error {
+	var id int64
+
+	query := `SELECT id
+                FROM pinjaman
+                WHERE id = ? AND status = 'aktif'
+                FOR UPDATE`
+
+	err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
+
+	return petakanError(err, "Kunci pinjaman aktif")
+}
+
+// KunciByID mengunci pinjaman tanpa memeriksa statusnya.
+// Digunakan untuk proses replay dan pembatalan.
+func (PinjamanRepo) KunciByID(
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
+) error {
+	var id int64
+
+	query := `SELECT id
+                FROM pinjaman
+                WHERE id = ?
+                FOR UPDATE`
+
+	err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
+
+	return petakanError(err, "Kunci pinjaman")
+}
+
+// UbahStatus memperbarui status pinjaman.
+// Harus dipanggil di dalam transaksi database.
+func (PinjamanRepo) UbahStatus(
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
+	status string,
+	tanggalLunas *time.Time,
+) error {
+	query := `UPDATE pinjaman
+        SET status = ?, tanggal_lunas = ?
+        WHERE id = ?`
+
+	var tanggal any
+	if tanggalLunas != nil {
+		tanggal = tanggalLunas.Format("2006-01-02")
+	}
+
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		status,
+		tanggal,
+		idPinjaman,
+	)
+
+	return petakanError(err, "Ubah status pinjaman")
 }

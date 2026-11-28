@@ -1,0 +1,227 @@
+{{define "content"}}
+<section class="page anggota-detail-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Pembayaran Pinjaman #{{.Detail.ID}}</h1>
+            <p class="anggota-form-subtitle">
+                {{.Detail.NamaAnggota}} &middot;
+                No. Anggota: {{.Detail.NomorAnggota}} &middot;
+                Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}}
+                &middot;
+                {{if eq .Pembayaran.Pinjaman.Status "aktif"}}
+                    <span class="anggota-badge anggota-badge-active">Aktif</span>
+                {{else if eq .Pembayaran.Pinjaman.Status "lunas"}}
+                    <span class="anggota-badge">Lunas</span>
+                {{else}}
+                    <span class="anggota-badge">{{.Pembayaran.Pinjaman.Status}}</span>
+                {{end}}
+            </p>
+        </div>
+
+        <a href="/angsuran" class="btn anggota-save-btn">
+            Kembali ke Daftar Angsuran
+        </a>
+    </div>
+
+    {{if .Pesan}}
+    <div class="anggota-card">
+        <p class="anggota-muted">{{.Pesan}}</p>
+    </div>
+    {{end}}
+
+    {{if .Error}}
+    <div class="anggota-card">
+        {{range $field, $pesan := .Error}}
+        <p class="anggota-muted">{{$pesan}}</p>
+        {{end}}
+    </div>
+    {{end}}
+
+    <div class="anggota-card">
+        <h3 class="anggota-detail-title">Ringkasan Pinjaman</h3>
+        <table class="anggota-saldo-table">
+            <tbody>
+                <tr>
+                    <td>Pokok Pinjaman</td>
+                    <td>{{rupiah .Detail.JumlahPinjaman}}</td>
+                </tr>
+                <tr>
+                    <td>Tenor</td>
+                    <td>{{.Detail.TenorBulan}} Bulan</td>
+                </tr>
+                <tr>
+                    <td>Jasa Koperasi</td>
+                    <td>{{.Detail.JasaPerBulanBps}} bps (1%/bln flat)</td>
+                </tr>
+                <tr>
+                    <td>Total Pembayaran Masuk</td>
+                    <td>{{rupiah .Detail.TotalSudahBayar}}</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>Sisa Kewajiban Berjalan</td>
+                    <td>{{rupiah .Detail.SisaKewajiban}}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    {{if eq .Pembayaran.Pinjaman.Status "aktif"}}
+    <section class="payment-section">
+
+        <div class="payment-section-heading">
+            <h2>Transaksi Pinjaman</h2>
+            <p>Catat pembayaran angsuran atau proses pelunasan pinjaman.</p>
+        </div>
+
+        <div class="payment-tabs" role="tablist" aria-label="Jenis transaksi">
+
+            <button
+                type="button"
+                class="payment-tab active"
+                id="tab-angsuran"
+                role="tab"
+                aria-selected="true"
+                aria-controls="panel-angsuran"
+                data-payment-tab="angsuran">
+                Catat Pembayaran Angsuran
+            </button>
+
+            <button
+                type="button"
+                class="payment-tab"
+                id="tab-pelunasan"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-pelunasan"
+                data-payment-tab="pelunasan">
+                Pelunasan Pinjaman
+            </button>
+
+        </div>
+
+        <div class="payment-card">
+
+            <div
+                class="payment-panel"
+                id="panel-angsuran"
+                role="tabpanel"
+                aria-labelledby="tab-angsuran">
+
+                <div class="payment-panel-heading">
+                    <h3>Pembayaran Angsuran</h3>
+                    <p>Masukkan informasi pembayaran angsuran anggota.</p>
+                </div>
+
+                <form
+                    method="POST"
+                    action="/pinjaman/{{.Pembayaran.Pinjaman.ID}}/pembayaran"
+                    class="payment-form">
+
+                    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                    <div class="anggota-field">
+                        <label for="tanggal_bayar">Tanggal Pembayaran</label>
+                        <input
+                            id="tanggal_bayar"
+                            name="tanggal_bayar"
+                            type="date"
+                            required>
+                    </div>
+
+                    <div class="anggota-field">
+                        <label for="jumlah">Jumlah Pembayaran</label>
+                        <input
+                            id="jumlah"
+                            name="jumlah"
+                            type="number"
+                            min="1"
+                            max="1000000000"
+                            placeholder="Masukkan jumlah pembayaran"
+                            required>
+                    </div>
+
+                    <div class="anggota-field">
+                        <label for="keterangan">
+                            Keterangan <span class="payment-optional">(Opsional)</span>
+                        </label>
+                        <input
+                            id="keterangan"
+                            name="keterangan"
+                            type="text"
+                            maxlength="255"
+                            placeholder="Tambahkan keterangan">
+                    </div>
+
+                    <div class="payment-actions">
+                        <button type="submit" class="btn">
+                            Simpan Pembayaran
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <div
+                class="payment-panel"
+                id="panel-pelunasan"
+                role="tabpanel"
+                aria-labelledby="tab-pelunasan"
+                hidden>
+
+                <div class="payment-panel-heading">
+                    <h3>Pelunasan Pinjaman</h3>
+                    <p>Proses pembayaran untuk menyelesaikan seluruh kewajiban pinjaman.</p>
+                </div>
+
+                <div class="payment-estimate">
+                    <span>Estimasi total pelunasan</span>
+                    <strong>{{rupiah .Pembayaran.RincianPelunasan.Total}}</strong>
+                    <small>Estimasi berdasarkan perhitungan tanggal hari ini.</small>
+                </div>
+
+                <form
+                    method="POST"
+                    action="/pinjaman/{{.Pembayaran.Pinjaman.ID}}/pelunasan"
+                    class="payment-form">
+
+                    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                    <div class="anggota-field">
+                        <label for="tanggal_pelunasan">Tanggal Pelunasan</label>
+                        <input
+                            id="tanggal_pelunasan"
+                            name="tanggal_bayar"
+                            type="date"
+                            required>
+                    </div>
+
+                    <div class="anggota-field">
+                        <label for="keterangan_pelunasan">
+                            Keterangan <span class="payment-optional">(Opsional)</span>
+                        </label>
+                        <input
+                            id="keterangan_pelunasan"
+                            name="keterangan"
+                            type="text"
+                            maxlength="255"
+                            placeholder="Tambahkan keterangan">
+                    </div>
+
+                    <div class="payment-actions">
+                        <button type="submit" class="btn">
+                            Proses Pelunasan
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </section>
+    {{end}}
+
+</section>
+{{end}}
