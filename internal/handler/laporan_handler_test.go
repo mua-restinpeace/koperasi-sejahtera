@@ -333,7 +333,7 @@ func TestLaporanKartu_SetelahPelunasan(t *testing.T) {
 }
 
 func TestLaporanKartu_TidakAdaDan404(t *testing.T) {
-	f := &fakeLaporan{errKartu: service.ErrPinjamanTidakDitemukan}
+	f := &fakeLaporan{errKartu: service.ErrKartuPinjamanTidakAda}
 	rec := httptest.NewRecorder()
 	siapLaporan(t, f).LaporanKartu(rec, reqKartu("/laporan/pinjaman/1"))
 	if rec.Code != http.StatusNotFound {
@@ -409,7 +409,7 @@ func TestLaporanCSV_Kartu(t *testing.T) {
 	wajibMemuat(t, body, "Kartu pinjaman;#1", "Total sisa tagihan;0", "2027-02-20;pelunasan;4178000;80000")
 
 	rec = httptest.NewRecorder()
-	siapLaporan(t, &fakeLaporan{errKartu: service.ErrPinjamanTidakDitemukan}).LaporanKartuCSV(rec, reqKartu("/laporan/pinjaman/1/csv"))
+	siapLaporan(t, &fakeLaporan{errKartu: service.ErrKartuPinjamanTidakAda}).LaporanKartuCSV(rec, reqKartu("/laporan/pinjaman/1/csv"))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}

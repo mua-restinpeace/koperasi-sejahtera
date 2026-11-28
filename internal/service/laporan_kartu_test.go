@@ -148,12 +148,12 @@ func TestKartuPinjaman_Service(t *testing.T) {
 	}
 
 	repo.kartu = nil
-	if _, err := s.KartuPinjaman(ctx, KartuInput{ID: 99}); !errors.Is(err, ErrPinjamanTidakDitemukan) {
+	if _, err := s.KartuPinjaman(ctx, KartuInput{ID: 99}); !errors.Is(err, ErrKartuPinjamanTidakAda) {
 		t.Errorf("pinjaman tidak ada: %v", err)
 	}
 
 	repo.kartu, repo.galat = &pj, errors.New("db mati")
-	if _, err := s.KartuPinjaman(ctx, KartuInput{ID: 1}); err == nil || errors.Is(err, ErrPinjamanTidakDitemukan) {
+	if _, err := s.KartuPinjaman(ctx, KartuInput{ID: 1}); err == nil || errors.Is(err, ErrKartuPinjamanTidakAda) {
 		t.Errorf("galat repo harus diteruskan: %v", err)
 	}
 }

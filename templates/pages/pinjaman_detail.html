@@ -1,0 +1,113 @@
+{{define "content"}}
+<section class="page anggota-detail-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Pinjaman #{{.Detail.ID}} - {{.Detail.NamaAnggota}}</h1>
+            <p class="anggota-form-subtitle">
+                No. Anggota: {{.Detail.NomorAnggota}} · Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}} ·
+                {{if eq .Detail.Status "aktif"}}
+                    <span class="anggota-badge anggota-badge-active">Aktif</span>
+                {{else if eq .Detail.Status "lunas"}}
+                    <span class="anggota-badge" style="background:#e3f2fd;color:#1976d2;">Lunas</span>
+                {{else}}
+                    <span class="anggota-badge anggota-badge-exit">{{.Detail.Status}}</span>
+                {{end}}
+            </p>
+        </div>
+
+        <a href="/pinjaman" class="anggota-back-link">
+            ← Kembali ke Daftar Pinjaman
+        </a>
+    </div>
+
+    <div class="anggota-detail-grid">
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Ringkasan Pinjaman</h3>
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr><td>Pokok Pinjaman</td><td>{{rupiah .Detail.JumlahPinjaman}}</td></tr>
+                    <tr><td>Tenor</td><td>{{.Detail.TenorBulan}} Bulan</td></tr>
+                    <tr><td>Jasa Koperasi</td><td>{{.Detail.JasaPerBulanBps}} bps (1%/bln flat)</td></tr>
+                    <tr><td>Total Pembayaran Masuk</td><td>{{rupiah .Detail.TotalSudahBayar}}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Sisa Kewajiban Berjalan</td>
+                        <td>{{rupiah .Detail.SisaKewajiban}}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {{if .Detail.RincianLunas}}
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Simulasi Pelunasan Dipercepat</h3>
+            <p class="anggota-muted">Perhitungan pelunasan hari ini jika dilunasi sekaligus (bebas jasa bulan depan + biaya admin 2%).</p>
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr><td>Sisa Pokok</td><td>{{rupiah .Detail.RincianLunas.SisaPokok}}</td></tr>
+                    <tr><td>Denda Terutang</td><td>{{rupiah .Detail.RincianLunas.Denda}}</td></tr>
+                    <tr><td>Jasa Jatuh Tempo</td><td>{{rupiah .Detail.RincianLunas.JasaJatuhTempo}}</td></tr>
+                    <tr><td>Jasa Bulan Berjalan</td><td>{{rupiah .Detail.RincianLunas.JasaBulanBerjalan}}</td></tr>
+                    <tr><td>Biaya Admin (2%)</td><td>{{rupiah .Detail.RincianLunas.BiayaAdmin}}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total Pelunasan Dipercepat</td>
+                        <td style="color: #2e7d32;">{{rupiah .Detail.RincianLunas.Total}}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="anggota-card" style="margin-top: 24px;">
+        <h3 class="anggota-detail-title">Jadwal Angsuran</h3>
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>Ke</th>
+                        <th>Jatuh Tempo</th>
+                        <th>Pokok Tagihan</th>
+                        <th>Jasa Tagihan</th>
+                        <th>Total Tagihan</th>
+                        <th>Dibayar</th>
+                        <th>Denda Terutang</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Detail.Jadwal}}
+                    <tr>
+                        <td><strong>{{.Urutan}}</strong></td>
+                        <td>{{.JatuhTempo.Format "02-01-2006"}}</td>
+                        <td>{{rupiah .Pokok}}</td>
+                        <td>{{rupiah .Jasa}}</td>
+                        <td><strong>{{rupiah .Total}}</strong></td>
+                        <td>{{rupiah .TotalDibayar}}</td>
+                        <td>
+                            {{if gt .DendaTerutang 0}}
+                                <span style="color: #c93a3f; font-weight: 600;">{{rupiah .DendaTerutang}}</span>
+                            {{else}}
+                                <span class="anggota-muted">Rp 0</span>
+                            {{end}}
+                        </td>
+                        <td>
+                            {{if .IsLunas}}
+                                <span class="anggota-badge anggota-badge-active">Lunas</span>
+                            {{else}}
+                                <span class="anggota-badge" style="background:#fff3e0;color:#e65100;">Belum Lunas</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{{end}}

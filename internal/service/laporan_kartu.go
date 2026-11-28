@@ -12,9 +12,9 @@ import (
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/repository"
 )
 
-// ErrPinjamanTidakDitemukan dikembalikan kartu pinjaman untuk nomor pinjaman yang
+// ErrKartuPinjamanTidakAda dikembalikan kartu pinjaman untuk nomor pinjaman yang
 // tidak ada atau sudah dibatalkan.
-var ErrPinjamanTidakDitemukan = errors.New("pinjaman tidak ditemukan")
+var ErrKartuPinjamanTidakAda = errors.New("pinjaman tidak ditemukan")
 
 // =====================================================================
 // L-1 Kartu pinjaman
@@ -179,7 +179,7 @@ func (s *LaporanService) KartuPinjaman(ctx context.Context, in KartuInput) (Kart
 
 	pj, err := s.repo.DetailPinjaman(ctx, s.db, in.ID)
 	if errors.Is(err, repository.ErrTidakDitemukan) {
-		return KartuPinjaman{}, ErrPinjamanTidakDitemukan
+		return KartuPinjaman{}, ErrKartuPinjamanTidakAda
 	}
 	if err != nil {
 		return KartuPinjaman{}, fmt.Errorf("kartu pinjaman: %w", err)

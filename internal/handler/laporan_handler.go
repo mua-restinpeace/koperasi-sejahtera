@@ -18,25 +18,25 @@ type LaporanService interface {
 	Dashboard(ctx context.Context) (service.Dashboard, error)
 }
 
-type dataDaftarPinjaman struct {
+type dataLaporanDaftarPinjaman struct {
 	Halaman
 	Pinjaman []model.PinjamanKartu
 }
 
-type dataKartu struct {
+type dataLaporanKartu struct {
 	Halaman
 	service.KartuPinjaman
 	TanggalInput string // isi kolom tanggal (YYYY-MM-DD)
 	Error        map[string]string
 }
 
-type dataPendapatan struct {
+type dataLaporanPendapatan struct {
 	Halaman
 	service.LaporanPendapatan
 	Error map[string]string
 }
 
-type dataTunggakan struct {
+type dataLaporanTunggakan struct {
 	Halaman
 	service.LaporanTunggakan
 	TanggalInput string // isi kolom tanggal (YYYY-MM-DD)
@@ -59,11 +59,11 @@ func (h *Handler) LaporanPendapatan(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.As(err, &ve):
 		hasil = service.LaporanPendapatan{Dari: in.Dari, Sampai: in.Sampai}
-		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_pendapatan.html", dataPendapatan{Halaman: hal, LaporanPendapatan: hasil, Error: ve.Pesan})
+		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_pendapatan.html", dataLaporanPendapatan{Halaman: hal, LaporanPendapatan: hasil, Error: ve.Pesan})
 	case err != nil:
 		h.error(w, r, err)
 	default:
-		h.render(w, http.StatusOK, "pages/laporan_pendapatan.html", dataPendapatan{Halaman: hal, LaporanPendapatan: hasil})
+		h.render(w, http.StatusOK, "pages/laporan_pendapatan.html", dataLaporanPendapatan{Halaman: hal, LaporanPendapatan: hasil})
 	}
 }
 
@@ -77,11 +77,11 @@ func (h *Handler) LaporanTunggakan(w http.ResponseWriter, r *http.Request) {
 	var ve *service.ValidasiError
 	switch {
 	case errors.As(err, &ve):
-		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_tunggakan.html", dataTunggakan{Halaman: hal, TanggalInput: in.Tanggal, Error: ve.Pesan})
+		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_tunggakan.html", dataLaporanTunggakan{Halaman: hal, TanggalInput: in.Tanggal, Error: ve.Pesan})
 	case err != nil:
 		h.error(w, r, err)
 	default:
-		h.render(w, http.StatusOK, "pages/laporan_tunggakan.html", dataTunggakan{Halaman: hal, LaporanTunggakan: hasil, TanggalInput: hasil.Tanggal.Format("2006-01-02")})
+		h.render(w, http.StatusOK, "pages/laporan_tunggakan.html", dataLaporanTunggakan{Halaman: hal, LaporanTunggakan: hasil, TanggalInput: hasil.Tanggal.Format("2006-01-02")})
 	}
 }
 
@@ -92,7 +92,7 @@ func (h *Handler) LaporanPinjaman(w http.ResponseWriter, r *http.Request) {
 		h.error(w, r, err)
 		return
 	}
-	h.render(w, http.StatusOK, "pages/laporan_pinjaman.html", dataDaftarPinjaman{Halaman: h.halaman(r, "Kartu Pinjaman", "laporan"), Pinjaman: daftar})
+	h.render(w, http.StatusOK, "pages/laporan_pinjaman.html", dataLaporanDaftarPinjaman{Halaman: h.halaman(r, "Kartu Pinjaman", "laporan"), Pinjaman: daftar})
 }
 
 // LaporanKartu menampilkan kartu satu pinjaman: jadwal angsuran dengan status dan
@@ -110,14 +110,14 @@ func (h *Handler) LaporanKartu(w http.ResponseWriter, r *http.Request) {
 	hasil, err := h.svc.Laporan.KartuPinjaman(r.Context(), in)
 	var ve *service.ValidasiError
 	switch {
-	case errors.Is(err, service.ErrPinjamanTidakDitemukan):
+	case errors.Is(err, service.ErrKartuPinjamanTidakAda):
 		h.notFound(w)
 	case errors.As(err, &ve):
-		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_kartu.html", dataKartu{Halaman: hal, TanggalInput: in.Tanggal, Error: ve.Pesan, KartuPinjaman: service.KartuPinjaman{Pinjaman: model.PinjamanKartu{ID: id}}})
+		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_kartu.html", dataLaporanKartu{Halaman: hal, TanggalInput: in.Tanggal, Error: ve.Pesan, KartuPinjaman: service.KartuPinjaman{Pinjaman: model.PinjamanKartu{ID: id}}})
 	case err != nil:
 		h.error(w, r, err)
 	default:
-		h.render(w, http.StatusOK, "pages/laporan_kartu.html", dataKartu{Halaman: hal, KartuPinjaman: hasil, TanggalInput: hasil.Tanggal.Format("2006-01-02")})
+		h.render(w, http.StatusOK, "pages/laporan_kartu.html", dataLaporanKartu{Halaman: hal, KartuPinjaman: hasil, TanggalInput: hasil.Tanggal.Format("2006-01-02")})
 	}
 }
 
@@ -176,7 +176,7 @@ func (h *Handler) LaporanKartuCSV(w http.ResponseWriter, r *http.Request) {
 	hasil, err := h.svc.Laporan.KartuPinjaman(r.Context(), service.KartuInput{ID: id, Tanggal: r.URL.Query().Get("tanggal")})
 	var ve *service.ValidasiError
 	switch {
-	case errors.Is(err, service.ErrPinjamanTidakDitemukan):
+	case errors.Is(err, service.ErrKartuPinjamanTidakAda):
 		h.notFound(w)
 		return
 	case errors.As(err, &ve):

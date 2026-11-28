@@ -79,6 +79,12 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("GET /laporan/tunggakan", r.h.LaporanTunggakan)
 	r.Protected("GET /laporan/tunggakan/csv", r.h.LaporanTunggakanCSV)
 
+	// Pinjaman
+	r.Protected("GET /pinjaman", r.h.DaftarPinjaman)
+	r.Protected("GET /pinjaman/baru", r.h.FormPengajuan)
+	r.Protected("POST /pinjaman", r.h.SimpanPinjaman)
+	r.Protected("GET /pinjaman/{id}", r.h.DetailPinjaman)
+
 	// urutan dari luar ke dalam: header, log, batas body, sesi, lalu mux.
 	var out http.Handler = mux
 	out = middleware.Sesi(auth)(out)
