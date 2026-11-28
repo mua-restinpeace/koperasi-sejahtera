@@ -318,66 +318,66 @@ func (PinjamanRepo) GetPembayaranByPinjamanID(ctx context.Context, db database.D
 // KunciAktif mengambil dan mengunci baris pinjaman aktif.
 // Harus dijalankan dalam transaksi database.
 func (PinjamanRepo) KunciAktif(
-        ctx context.Context,
-        db database.DBTX,
-        idPinjaman int64,
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
 ) error {
-        var id int64
+	var id int64
 
-        query := `SELECT id
+	query := `SELECT id
                 FROM pinjaman
                 WHERE id = ? AND status = 'aktif'
                 FOR UPDATE`
 
-        err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
+	err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
 
-        return petakanError(err, "Kunci pinjaman aktif")
+	return petakanError(err, "Kunci pinjaman aktif")
 }
 
 // KunciByID mengunci pinjaman tanpa memeriksa statusnya.
 // Digunakan untuk proses replay dan pembatalan.
 func (PinjamanRepo) KunciByID(
-        ctx context.Context,
-        db database.DBTX,
-        idPinjaman int64,
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
 ) error {
-        var id int64
+	var id int64
 
-        query := `SELECT id
+	query := `SELECT id
                 FROM pinjaman
                 WHERE id = ?
                 FOR UPDATE`
 
-        err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
+	err := db.QueryRowContext(ctx, query, idPinjaman).Scan(&id)
 
-        return petakanError(err, "Kunci pinjaman")
+	return petakanError(err, "Kunci pinjaman")
 }
 
 // UbahStatus memperbarui status pinjaman.
 // Harus dipanggil di dalam transaksi database.
 func (PinjamanRepo) UbahStatus(
-        ctx context.Context,
-        db database.DBTX,
-        idPinjaman int64,
-        status string,
-        tanggalLunas *time.Time,
+	ctx context.Context,
+	db database.DBTX,
+	idPinjaman int64,
+	status string,
+	tanggalLunas *time.Time,
 ) error {
-        query := `UPDATE pinjaman
+	query := `UPDATE pinjaman
         SET status = ?, tanggal_lunas = ?
         WHERE id = ?`
 
-        var tanggal any
-        if tanggalLunas != nil {
-                tanggal = tanggalLunas.Format("2006-01-02")
-        }
+	var tanggal any
+	if tanggalLunas != nil {
+		tanggal = tanggalLunas.Format("2006-01-02")
+	}
 
-        _, err := db.ExecContext(
-                ctx,
-                query,
-                status,
-                tanggal,
-                idPinjaman,
-        )
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		status,
+		tanggal,
+		idPinjaman,
+	)
 
-        return petakanError(err, "Ubah status pinjaman")
+	return petakanError(err, "Ubah status pinjaman")
 }

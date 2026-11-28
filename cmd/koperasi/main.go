@@ -92,11 +92,11 @@ func run(log *slog.Logger) error {
 	)
 
 	h, err := handler.NewHandler(cfg, log, templates.FS, handler.Service{
-                Auth:       authService,
-                Anggota:    anggotaSvc,
-                Simpanan:   simpananSvc,
-                Pinjaman:   pinjamanSvc,
-                Pembayaran: pembayaranSvc,
+		Auth:       authService,
+		Anggota:    anggotaSvc,
+		Simpanan:   simpananSvc,
+		Pinjaman:   pinjamanSvc,
+		Pembayaran: pembayaranSvc,
 	})
 
 	if err != nil {
