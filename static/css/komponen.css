@@ -90,3 +90,25 @@
   .stat b { font-size: 16px; }
   .tbl { min-width: 460px; }
 }
+
+/* ---- laporan ---- */
+.tbl th.r, .tbl td.r { text-align: right; }
+.tbl tfoot td { font-weight: 700; border-top: 2px solid var(--bd); border-bottom: 0; padding-top: 14px; }
+.tbl td a { color: inherit; text-decoration: none; }
+.tbl td a:hover { color: var(--or); }
+
+.filter { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+.filter label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+.filter input { font: inherit; color: var(--tx); background: var(--mu); border: 1px solid var(--bd); border-radius: 12px; height: 44px; padding: 0 14px; min-width: 170px; }
+.filter input:focus { outline: 0; border-color: var(--or); box-shadow: 0 0 0 3px #ffeee8; }
+.filter .btn { height: 44px; }
+.galat-kolom { color: var(--er); font-size: 11.5px; margin: 4px 0 0; }
+
+.stat-row.n4 { grid-template-columns: repeat(4, 1fr); }
+.stat-row.n4 .stat { grid-column: auto; }
+@media (max-width: 760px) { .stat-row.n4 { grid-template-columns: repeat(2, 1fr); } }
+
+.kartu-laporan { display: block; color: inherit; text-decoration: none; transition: box-shadow .15s, transform .15s; }
+.kartu-laporan:hover { box-shadow: 0 8px 24px rgba(23, 35, 61, .1); transform: translateY(-1px); }
+.kartu-laporan h3 { margin: 10px 0 6px; font-size: 15px; }
+.kartu-laporan p { margin: 0; color: var(--tx2); font-size: 12.5px; line-height: 1.5; }

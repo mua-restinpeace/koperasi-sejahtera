@@ -24,6 +24,7 @@ type Service struct {
 	Auth     AuthService
 	Anggota  AnggotaService
 	Simpanan SimpananService
+	Laporan  LaporanService
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang

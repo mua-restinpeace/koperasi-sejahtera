@@ -1,0 +1,53 @@
+{{define "content"}}
+<section class="page">
+    <h1>Daftar Tunggakan</h1>
+    <p class="sub">Angsuran yang lewat jatuh tempo dan jasa atau pokoknya belum lunas, dihitung sampai tanggal yang dipilih.</p>
+
+    <form class="card filter" method="get" action="/laporan/tunggakan">
+        <div>
+            <label for="tanggal">Per tanggal</label>
+            <input id="tanggal" name="tanggal" type="date" value="{{.TanggalInput}}">
+            {{with index .Error "tanggal"}}<p class="galat-kolom">{{.}}</p>{{end}}
+        </div>
+        <button type="submit" class="btn">Terapkan</button>
+        <a class="btn btn-sec" href="/laporan/tunggakan">Hari ini</a>
+    </form>
+
+    {{range .Dilewati}}
+    <p class="catatan-contoh" role="alert">Data dilewati: {{.}}</p>
+    {{end}}
+
+    <div class="stat-row n4">
+        <div class="card stat"><span>Anggota menunggak</span><b>{{.JumlahAnggota}}</b><em>{{len .Baris}} angsuran</em></div>
+        <div class="card stat"><span>Sisa tagihan</span><b>{{rupiah .TotalTagihan}}</b><em>Jasa + pokok</em></div>
+        <div class="card stat"><span>Denda berjalan</span><b>{{rupiah .TotalDenda}}</b></div>
+        <div class="card stat hl"><span>Total</span><b>{{rupiah .TotalSemua}}</b></div>
+    </div>
+
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Anggota</th><th>Pinjaman</th><th>Angsuran</th><th>Jatuh tempo</th><th>Terlambat</th><th class="r">Sisa tagihan</th><th class="r">Denda</th><th class="r">Total</th></tr>
+                </thead>
+                <tbody>
+                    {{range .Baris}}
+                    <tr>
+                        <td><a href="/anggota/{{.IDAnggota}}"><b>{{.NamaAnggota}}</b></a><div class="mut">{{.NomorAnggota}}</div></td>
+                        <td>#{{.IDPinjaman}}</td>
+                        <td>Ke-{{.Urutan}}</td>
+                        <td>{{.JatuhTempo.Format "02-01-2006"}}</td>
+                        <td><span class="badge {{if ge .HariTerlambat 30}}badge-er{{else}}badge-wa{{end}}">{{.HariTerlambat}} hari</span></td>
+                        <td class="num r">{{rupiah .Tagihan}}<div class="mut">jasa {{rupiah .SisaJasa}} · pokok {{rupiah .SisaPokok}}</div></td>
+                        <td class="num r">{{rupiah .DendaBerjalan}}</td>
+                        <td class="num r">{{rupiah .Total}}</td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="8" class="kosong">Tidak ada angsuran yang menunggak pada tanggal ini.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{{end}}
