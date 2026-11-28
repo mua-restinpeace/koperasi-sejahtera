@@ -5,7 +5,7 @@
         <div>
             <h1>Pinjaman #{{.Detail.ID}} - {{.Detail.NamaAnggota}}</h1>
             <p class="anggota-form-subtitle">
-                No. Anggota: {{.Detail.NomorAnggota}} â”¬â•– Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}} â”¬â•–
+                No. Anggota: {{.Detail.NomorAnggota}} &middot; Dicairkan: {{.Detail.TanggalPencairan.Format "02-01-2006"}} &middot;
                 {{if eq .Detail.Status "aktif"}}
                     <span class="anggota-badge anggota-badge-active">Aktif</span>
                 {{else if eq .Detail.Status "lunas"}}
