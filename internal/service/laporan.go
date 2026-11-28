@@ -19,6 +19,17 @@ type LaporanRepo interface {
 	PinjamanBerjalan(ctx context.Context, db database.DBTX, asOf time.Time) ([]model.PinjamanLaporan, error)
 	AngsuranBerjalan(ctx context.Context, db database.DBTX, asOf time.Time) ([]model.Angsuran, error)
 	PembayaranBerjalan(ctx context.Context, db database.DBTX, asOf time.Time) ([]model.Pembayaran, error)
+
+	// L-1 kartu pinjaman
+	DaftarPinjaman(ctx context.Context, db database.DBTX) ([]model.PinjamanKartu, error)
+	DetailPinjaman(ctx context.Context, db database.DBTX, id int64) (model.PinjamanKartu, error)
+	AngsuranPinjaman(ctx context.Context, db database.DBTX, id int64) ([]model.Angsuran, error)
+	PembayaranPinjaman(ctx context.Context, db database.DBTX, id int64) ([]model.Pembayaran, error)
+
+	// Dashboard
+	RingkasanAnggota(ctx context.Context, db database.DBTX, awalBulan, hariIni time.Time) (aktif, baru int, err error)
+	TotalSimpanan(ctx context.Context, db database.DBTX) (int64, error)
+	WajibBelum(ctx context.Context, db database.DBTX, periode, hariIni time.Time, batas int) ([]model.AnggotaWajibBelum, int, error)
 }
 
 // LaporanService menyusun laporan (hanya baca). Rumusnya ada di fungsi murni
@@ -29,6 +40,7 @@ type LaporanService struct {
 	biayaAdminBps int
 	zona          *time.Location
 	now           func() time.Time
+	wajibPerBulan int64 // nominal simpanan wajib, untuk kolom "kekurangan" di dashboard
 }
 
 func NewLaporanService(db database.Sumber, repo LaporanRepo, biayaAdminBps int, zona *time.Location, now func() time.Time) *LaporanService {

@@ -297,6 +297,16 @@ type fakeLaporanRepo struct {
 	bayar        []model.Pembayaran
 	asOf         time.Time
 	galat        error
+
+	daftar []model.PinjamanKartu
+	kartu  *model.PinjamanKartu // nil = pinjaman tidak ada
+
+	aktif, baru  int
+	simpanan     int64
+	wajib        []model.AnggotaWajibBelum
+	totalWajib   int
+	periodeWajib time.Time
+	batasWajib   int
 }
 
 func (f *fakeLaporanRepo) Pembayaran(_ context.Context, _ database.DBTX, d, s *time.Time) ([]model.PembayaranLaporan, error) {

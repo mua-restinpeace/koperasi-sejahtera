@@ -1,0 +1,31 @@
+{{define "content"}}
+<section class="page">
+    <h1>Kartu Pinjaman</h1>
+    <p class="sub">Pilih pinjaman untuk melihat jadwal angsuran, status, dan riwayat pembayarannya.</p>
+
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Pinjaman</th><th>Anggota</th><th>Dicairkan</th><th>Tenor</th><th class="r">Jumlah</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {{range .Pinjaman}}
+                    <tr>
+                        <td>#{{.ID}}</td>
+                        <td><a href="/anggota/{{.IDAnggota}}"><b>{{.NamaAnggota}}</b></a><div class="mut">{{.NomorAnggota}}</div></td>
+                        <td>{{.TanggalPencairan.Format "02-01-2006"}}</td>
+                        <td>{{.TenorBulan}} bulan</td>
+                        <td class="num r">{{rupiah .Jumlah}}</td>
+                        <td><span class="badge {{if eq .Status "aktif"}}badge-wa{{else}}badge-ok{{end}}">{{if eq .Status "aktif"}}Aktif{{else}}Lunas{{end}}</span></td>
+                        <td class="r"><a class="btn btn-sm btn-sec" href="/laporan/pinjaman/{{.ID}}">Lihat kartu</a></td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="7" class="kosong">Belum ada pinjaman.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{{end}}

@@ -60,7 +60,7 @@ func run(log *slog.Logger) error {
 	anggotaSvc := service.NewAnggotaService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, repository.PinjamanRepo{}, auditSvc, cfg.SimpananPokok, zona, nil)
 	simpananSvc := service.NewSimpananService(sumber, repository.AnggotaRepo{}, repository.SimpananRepo{}, auditSvc, cfg.SimpananWajib, zona, nil)
 
-	laporanSvc := service.NewLaporanService(sumber, repository.LaporanRepo{}, cfg.BiayaAdminBps, zona, nil)
+	laporanSvc := service.NewLaporanService(sumber, repository.LaporanRepo{}, cfg.BiayaAdminBps, zona, nil).DenganWajib(cfg.SimpananWajib)
 	pinjamanSvc := service.NewPinjamanService(
 		sumber,
 		repository.PinjamanRepo{},
