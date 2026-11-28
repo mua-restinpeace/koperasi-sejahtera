@@ -24,6 +24,7 @@ type Service struct {
 	Auth     AuthService
 	Anggota  AnggotaService
 	Simpanan SimpananService
+	Pinjaman PinjamanService
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang
@@ -48,6 +49,7 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 
 	funcs := template.FuncMap{
 		"rupiah": helper.FormatRupiah,
+		"add":    func(a, b int64) int64 { return a + b },
 	}
 
 	tmpl := make(map[string]*template.Template, len(pages))
