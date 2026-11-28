@@ -4,9 +4,18 @@ import (
 	"net/http"
 )
 
-// Beranda menampilkan halaman awal.
+// Beranda menampilkan dashboard dengan angka asli dari database
+// (lihat LaporanService.Dashboard).
 func (h *Handler) Beranda(w http.ResponseWriter, r *http.Request) {
-	h.render(w, http.StatusOK, "pages/dashboard.html", h.halaman(r, "Dashboard", "dashboard"))
+	hasil, err := h.svc.Laporan.Dashboard(r.Context())
+	if err != nil {
+		h.error(w, r, err)
+		return
+	}
+
+	d := tampilanDashboard(hasil)
+	d.Halaman = h.halaman(r, "Dashboard", "dashboard")
+	h.render(w, http.StatusOK, "pages/dashboard.html", d)
 }
 
 // Healthz dipakai untuk pengecekan bahwa server hidup.

@@ -1,12 +1,8 @@
 {{define "sidebar"}}
 <aside class="sidebar">
-    <div class="logo">
-        <i>K</i>
-        <div>
-            <b>Koperasi Sejahtera</b>
-            <small>Koperasi Simpan Pinjam</small>
-        </div>
-    </div>
+    <a href="/" class="logo">
+        <img class="logo-img" src="/static/img/logo.png" alt="Logo Koperasi Sejahtera" width="393" height="82">
+    </a>
 
     <nav class="sidebar-nav">
         <a href="/" class="{{if eq .MenuAktif "dashboard"}}active{{end}}">
@@ -50,20 +46,19 @@
             </svg>
             Simpanan
         </a>
+
+        <a href="/laporan" class="{{if eq .MenuAktif "laporan"}}active{{end}}">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+            </svg>
+            Laporan
+        </a>
     </nav>
 
     <div class="sidebar-spacer"></div>
 
-    <a href="/pengaturan" class="sidebar-settings {{if eq .MenuAktif "pengaturan"}}active{{end}}">
-        <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>
-        </svg>
-        Pengaturan
-    </a>
-
     <div class="sidebar-user">
-        <div class="avatar">BP</div>
+        <div class="avatar">{{inisial .Pengguna.NamaLengkap}}</div>
 
         <div class="user-info">
             <b>{{.Pengguna.NamaLengkap}}</b>

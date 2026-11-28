@@ -1,0 +1,63 @@
+{{define "content"}}
+<section class="page">
+    <h1>Pendapatan Bulanan</h1>
+    <p class="sub">Jasa, denda, dan biaya administrasi yang diterima, dihitung per bulan tanggal bayar. Pembayaran yang dibatalkan tidak dihitung.</p>
+
+    <form class="card filter" method="get" action="/laporan/pendapatan">
+        <div>
+            <label for="dari">Dari bulan</label>
+            <input id="dari" name="dari" type="month" value="{{.Dari}}">
+            {{with index .Error "dari"}}<p class="galat-kolom">{{.}}</p>{{end}}
+        </div>
+        <div>
+            <label for="sampai">Sampai bulan</label>
+            <input id="sampai" name="sampai" type="month" value="{{.Sampai}}">
+            {{with index .Error "sampai"}}<p class="galat-kolom">{{.}}</p>{{end}}
+        </div>
+        <button type="submit" class="btn">Terapkan</button>
+        <a class="btn btn-sec" href="/laporan/pendapatan">Semua periode</a>
+        <a class="btn btn-sec btn-unduh" href="/laporan/pendapatan/csv?dari={{.Dari}}&amp;sampai={{.Sampai}}">Unduh CSV</a>
+    </form>
+
+    <div class="stat-row n4">
+        <div class="card stat"><span>Jasa pinjaman</span><b>{{rupiah .Total.Jasa}}</b></div>
+        <div class="card stat"><span>Denda</span><b>{{rupiah .Total.Denda}}</b></div>
+        <div class="card stat"><span>Biaya administrasi</span><b>{{rupiah .Total.BiayaAdmin}}</b><em>Pelunasan dipercepat</em></div>
+        <div class="card stat hl"><span>Total pendapatan</span><b>{{rupiah .Total.Total}}</b></div>
+    </div>
+
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Bulan</th><th class="r">Jasa</th><th class="r">Denda</th><th class="r">Biaya admin</th><th class="r">Total</th></tr>
+                </thead>
+                <tbody>
+                    {{range .Bulan}}
+                    <tr>
+                        <td><b>{{.Nama}}</b></td>
+                        <td class="num r">{{rupiah .Jasa}}</td>
+                        <td class="num r">{{rupiah .Denda}}</td>
+                        <td class="num r">{{rupiah .BiayaAdmin}}</td>
+                        <td class="num r">{{rupiah .Total}}</td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="5" class="kosong">Belum ada pembayaran pada periode ini.</td></tr>
+                    {{end}}
+                </tbody>
+                {{if .Bulan}}
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td class="num r">{{rupiah .Total.Jasa}}</td>
+                        <td class="num r">{{rupiah .Total.Denda}}</td>
+                        <td class="num r">{{rupiah .Total.BiayaAdmin}}</td>
+                        <td class="num r">{{rupiah .Total.Total}}</td>
+                    </tr>
+                </tfoot>
+                {{end}}
+            </table>
+        </div>
+    </div>
+</section>
+{{end}}

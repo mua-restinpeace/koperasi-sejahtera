@@ -69,6 +69,15 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("POST /simpanan/{id}/tarik", r.h.TarikSukarela)
 	r.Protected("POST /simpanan/transaksi/{id}/batal", r.h.BatalSimpanan)
 
+	// Laporan
+	r.Protected("GET /laporan", r.h.Laporan)
+	r.Protected("GET /laporan/pinjaman", r.h.LaporanPinjaman)
+	r.Protected("GET /laporan/pinjaman/{id}", r.h.LaporanKartu)
+	r.Protected("GET /laporan/pinjaman/{id}/csv", r.h.LaporanKartuCSV)
+	r.Protected("GET /laporan/pendapatan", r.h.LaporanPendapatan)
+	r.Protected("GET /laporan/pendapatan/csv", r.h.LaporanPendapatanCSV)
+	r.Protected("GET /laporan/tunggakan", r.h.LaporanTunggakan)
+	r.Protected("GET /laporan/tunggakan/csv", r.h.LaporanTunggakanCSV)
 	// Angsuran
 	r.Protected("GET /angsuran", r.h.DaftarAngsuran)
 	r.Protected("GET /angsuran/{id}", r.h.HalamanPembayaranAngsuran)

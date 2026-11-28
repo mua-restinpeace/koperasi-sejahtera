@@ -1,0 +1,83 @@
+{{define "content"}}
+<section class="page">
+    <h1>Kartu Pinjaman #{{.Pinjaman.ID}}</h1>
+    <p class="sub"><a href="/laporan/pinjaman">&larr; Daftar pinjaman</a></p>
+
+    <form class="card filter" method="get" action="/laporan/pinjaman/{{.Pinjaman.ID}}">
+        <div>
+            <label for="tanggal">Posisi per tanggal</label>
+            <input id="tanggal" name="tanggal" type="date" value="{{.TanggalInput}}">
+            {{with index .Error "tanggal"}}<p class="galat-kolom">{{.}}</p>{{end}}
+        </div>
+        <button type="submit" class="btn">Terapkan</button>
+        <a class="btn btn-sec" href="/laporan/pinjaman/{{.Pinjaman.ID}}">Hari ini</a>
+        {{if not .Error}}<a class="btn btn-sec btn-unduh" href="/laporan/pinjaman/{{.Pinjaman.ID}}/csv?tanggal={{.TanggalInput}}">Unduh CSV</a>{{end}}
+    </form>
+
+    {{if .Pinjaman.NomorAnggota}}
+    <div class="card">
+        <dl class="kartu-info">
+            <div><dt>Anggota</dt><dd><a href="/anggota/{{.Pinjaman.IDAnggota}}">{{.Pinjaman.NamaAnggota}}</a><div class="mut">{{.Pinjaman.NomorAnggota}}</div></dd></div>
+            <div><dt>Jumlah pinjaman</dt><dd>{{rupiah .Pinjaman.Jumlah}}</dd></div>
+            <div><dt>Tenor</dt><dd>{{.Pinjaman.TenorBulan}} bulan</dd></div>
+            <div><dt>Dicairkan</dt><dd>{{.Pinjaman.TanggalPencairan.Format "02-01-2006"}}</dd></div>
+            <div><dt>Status pinjaman</dt><dd>{{if eq .Pinjaman.Status "aktif"}}Aktif{{else}}Lunas{{if not .Pinjaman.TanggalLunas.IsZero}} {{.Pinjaman.TanggalLunas.Format "02-01-2006"}}{{end}}{{end}}</dd></div>
+        </dl>
+    </div>
+
+    <div class="stat-row n4">
+        <div class="card stat"><span>Sudah dibayar</span><b>{{rupiah .TotalDibayar}}</b><em>Pokok + jasa + denda</em></div>
+        <div class="card stat"><span>Sisa pokok</span><b>{{rupiah .SisaPokok}}</b></div>
+        <div class="card stat"><span>Sisa jasa + denda</span><b>{{rupiah .SisaJasaDenda}}</b><em>jasa {{rupiah .SisaJasa}} · denda {{rupiah .DendaTerutang}}</em></div>
+        <div class="card stat hl"><span>Total sisa tagihan</span><b>{{rupiah .SisaTagihan}}</b></div>
+    </div>
+
+    <h2 class="judul-seksi">Jadwal angsuran per {{.Tanggal.Format "02-01-2006"}}</h2>
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Ke</th><th class="nw">Jatuh tempo</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Sisa</th><th class="r">Denda terutang</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {{range .Baris}}
+                    <tr>
+                        <td>{{.Urutan}}</td>
+                        <td class="nw">{{.JatuhTempo.Format "02-01-2006"}}</td>
+                        <td class="num r">{{rupiah .Tagihan}}<div class="mut">pokok {{rupiah .TagihanPokok}} · jasa {{rupiah .TagihanJasa}}</div></td>
+                        <td class="num r">{{rupiah .Dibayar}}{{if .DendaDibayar}}<div class="mut">denda dibayar {{rupiah .DendaDibayar}}</div>{{end}}</td>
+                        <td class="num r">{{rupiah .SisaTagihan}}</td>
+                        <td class="num r">{{rupiah .DendaTerutang}}</td>
+                        <td><span class="badge {{.Kelas}}">{{.Status}}{{if gt .HariTerlambat 0}} {{.HariTerlambat}} hari{{end}}</span>{{if not .LunasPada.IsZero}}<div class="mut">{{.LunasPada.Format "02-01-2006"}}</div>{{end}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="judul-seksi">Riwayat pembayaran</h2>
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Tanggal bayar</th><th>Jenis</th><th class="r">Jumlah diterima</th><th class="r">Biaya administrasi</th></tr>
+                </thead>
+                <tbody>
+                    {{range .Pembayaran}}
+                    <tr>
+                        <td class="nw">{{.TanggalBayar.Format "02-01-2006"}}</td>
+                        <td>{{if eq (printf "%s" .Jenis) "pelunasan"}}Pelunasan dipercepat{{else}}Angsuran{{end}}</td>
+                        <td class="num r">{{rupiah .Jumlah}}</td>
+                        <td class="num r">{{if .BiayaAdmin}}{{rupiah .BiayaAdmin}}{{else}}-{{end}}</td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="4" class="kosong">Belum ada pembayaran sampai tanggal ini.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
+</section>
+{{end}}

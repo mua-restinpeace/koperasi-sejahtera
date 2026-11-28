@@ -1,10 +1,77 @@
-
 {{define "content"}}
 <section class="page">
     <h1>Dashboard</h1>
+    <p class="sub">Ringkasan kondisi keuangan koperasi · {{.Periode}}</p>
 
-    <p class="page-placeholder">
-        This is main content for Dashboard.
-    </p>
+    <div class="stat-row">
+        <div class="card stat"><span>Anggota aktif</span><b>{{.Ringkasan.AnggotaAktif}}</b><em>+{{.Ringkasan.AnggotaBaru}} bulan ini</em></div>
+        <div class="card stat"><span>Sisa pinjaman berjalan</span><b>{{rupiah .Ringkasan.SisaPinjaman}}</b><em>{{.Ringkasan.PinjamanAktif}} pinjaman aktif</em></div>
+        <div class="card stat"><span>Total simpanan</span><b>{{rupiah .Ringkasan.TotalSimpanan}}</b><em>Pokok, wajib, sukarela</em></div>
+        <div class="card stat hl"><span>Pendapatan jasa pinjaman</span><b>{{rupiah .Ringkasan.PendapatanJasa}}</b><em>Bulan ini</em></div>
+        <div class="card stat hl"><span>Pendapatan denda</span><b>{{rupiah .Ringkasan.PendapatanDenda}}</b><em>Bulan ini</em></div>
+    </div>
+
+    <div class="g2">
+        <div class="card">
+            <div class="hd">
+                <div><h3>Angsuran terlambat</h3><p>{{.TotalTelat}} angsuran melewati jatuh tempo</p></div>
+                {{if .Terlambat}}<span class="badge badge-er">Perlu ditindaklanjuti</span>{{end}}
+            </div>
+            <div class="tw">
+                <table class="tbl">
+                    <tr><th>Anggota</th><th>Pinjaman</th><th>Tagihan</th><th>Terlambat</th><th></th></tr>
+                    {{range .Terlambat}}
+                    <tr>
+                        <td><b>{{.Nama}}</b><div class="mut">{{.NoAnggota}}</div></td>
+                        <td>{{.NoPinjaman}}<div class="mut">Jatuh tempo {{.JatuhTempo}}</div></td>
+                        <td class="num">{{rupiah .Tagihan}}</td>
+                        <td><span class="badge {{if ge .HariTelat 7}}badge-er{{else}}badge-wa{{end}}">{{.HariTelat}} hari</span></td>
+                        <td><a class="btn btn-sec btn-sm" href="/laporan/pinjaman/{{.IDPinjaman}}">Lihat</a></td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="5" class="kosong">Tidak ada angsuran terlambat.</td></tr>
+                    {{end}}
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="hd">
+                <div><h3>Simpanan wajib belum dibayar</h3><p>Periode {{.Periode}} · {{.TotalWajib}} anggota</p></div>
+                {{if .WajibBelum}}<span class="badge badge-wa">Belum bayar</span>{{end}}
+            </div>
+            <div class="tw">
+                <table class="tbl">
+                    <tr><th>Anggota</th><th>Kekurangan</th><th>Periode</th><th></th></tr>
+                    {{range .WajibBelum}}
+                    <tr>
+                        <td><b>{{.Nama}}</b><div class="mut">{{.NoAnggota}}</div></td>
+                        <td class="num">{{rupiah .Kekurangan}}</td>
+                        <td>{{.Periode}}</td>
+                        <td><a class="btn btn-sec btn-sm" href="/simpanan/{{.IDAnggota}}">Catat</a></td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="4" class="kosong">Semua simpanan wajib sudah dibayar.</td></tr>
+                    {{end}}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="hd">
+            <div><h3>Aktivitas keuangan</h3><p>Pendapatan jasa dan denda per bulan</p></div>
+        </div>
+        <div class="grafik" style="--n:{{len .Grafik}}" role="img" aria-label="Grafik pendapatan jasa dan denda per bulan">
+            {{range .Grafik}}
+            <div class="kol"><div class="pair">
+                <div class="b jasa" style="height:{{.JasaPct}}%" title="Jasa {{rupiah .Jasa}}"></div>
+                <div class="b denda" style="height:{{.DendaPct}}%" title="Denda {{rupiah .Denda}}"></div>
+            </div></div>
+            {{end}}
+        </div>
+        <div class="grafik-label" style="--n:{{len .Grafik}}">{{range .Grafik}}<span>{{.Bulan}}</span>{{end}}</div>
+        <div class="legend"><span><i style="background:var(--or)"></i>Jasa pinjaman</span><span><i style="background:var(--navy)"></i>Denda</span></div>
+    </div>
 </section>
 {{end}}

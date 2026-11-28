@@ -21,10 +21,11 @@ type Handler struct {
 }
 
 type Service struct {
-	Auth       AuthService
-	Anggota    AnggotaService
-	Simpanan   SimpananService
-	Pinjaman   PinjamanService
+	Auth     AuthService
+	Anggota  AnggotaService
+	Simpanan SimpananService
+	Laporan  LaporanService
+	Pinjaman PinjamanService
 	Pembayaran PembayaranService
 }
 
@@ -49,7 +50,8 @@ func NewHandler(cfg config.Config, log *slog.Logger, templateFS fs.FS, svc Servi
 	}
 
 	funcs := template.FuncMap{
-		"rupiah": helper.FormatRupiah,
+		"rupiah":  helper.FormatRupiah,
+		"inisial": helper.Inisial,
 		"add":    func(a, b int64) int64 { return a + b },
 	}
 

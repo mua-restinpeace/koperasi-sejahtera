@@ -1,0 +1,126 @@
+/* Komponen UI bersama (dari prototipe hi-fi). Dipakai Dashboard, Pinjaman, Angsuran, Laporan.
+   Dipisah dari app.css supaya tidak bentrok dengan gaya halaman Anggota/Simpanan. */
+
+.logo-img { display: block; width: 100%; max-width: 188px; height: auto; }
+.sidebar .logo { padding: 2px 6px 22px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.sub { color: var(--tx2); margin: 4px 0 22px; }
+.mut { color: var(--tx2); font-size: 11.5px; }
+.num { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+/* kartu */
+.card { background: var(--sf); border: 1px solid var(--bd); border-radius: 14px; box-shadow: var(--sh); padding: 20px; min-width: 0; }
+.card h3 { font-size: 14px; font-weight: 700; margin: 0 0 2px; }
+.card > p, .card .hd p { color: var(--tx2); font-size: 12px; margin: 0 0 12px; }
+.hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+/* kartu statistik */
+.stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 16px; }
+.stat span { color: var(--tx2); font-size: 12px; }
+.stat b { display: block; font-size: 19px; margin-top: 6px; }
+.stat em { font-style: normal; font-size: 11px; color: var(--tx2); }
+.stat.hl { background: var(--navy); color: #fff; border-color: var(--navy); }
+.stat.hl span, .stat.hl em { color: #b6c0d4; }
+
+/* tabel */
+.tw { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: left; font-weight: 600; color: var(--tx2); font-size: 11.5px; padding: 10px 8px; background: var(--mu); }
+.tbl th:first-child { border-radius: 8px 0 0 8px; }
+.tbl th:last-child { border-radius: 0 8px 8px 0; }
+.tbl td { padding: 12px 8px; border-bottom: 1px solid var(--bd); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl .kosong { text-align: center; color: var(--tx2); padding: 24px 8px; }
+
+/* lencana status */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-ok { background: #e6f6ef; color: #16a36a; }
+.badge-wa { background: #fef4dc; color: #b77700; }
+.badge-er { background: #fdebec; color: #e5484d; }
+.badge-or { background: #ffeee8; color: #ff5722; }
+.badge-gr { background: var(--mu); color: var(--tx2); border: 1px solid var(--bd); }
+
+/* tombol (varian dari .btn di app.css) */
+.btn.btn-sec { background: var(--sf); color: var(--tx); border-color: var(--bd); box-shadow: none; }
+.btn.btn-sec:hover { background: var(--mu); box-shadow: none; }
+.btn.btn-sm { padding: 8px 12px; font-size: 12px; border-radius: 9px; box-shadow: none; }
+
+/* tab */
+.tabs { display: flex; gap: 4px; background: var(--mu); padding: 4px; border-radius: 10px; }
+.tabs a { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--tx2); text-decoration: none; }
+.tabs a.on { background: var(--sf); color: var(--tx); box-shadow: var(--sh); }
+
+/* grafik batang sederhana (tinggi dihitung di server, dalam persen) */
+.grafik { display: grid; grid-template-columns: repeat(var(--n, 6), 1fr); gap: 14px; align-items: end; height: 190px; padding: 8px 4px 0; border-bottom: 1px solid var(--bd); }
+.grafik .kol { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.grafik .pair { display: flex; gap: 4px; align-items: flex-end; height: 100%; }
+.grafik .b { flex: 1; border-radius: 6px 6px 0 0; min-height: 2px; }
+.grafik .b.jasa { background: var(--or); }
+.grafik .b.denda { background: var(--navy); }
+.grafik-label { display: grid; grid-template-columns: repeat(var(--n, 6), 1fr); gap: 14px; font-size: 11px; color: var(--tx2); text-align: center; margin-top: 6px; }
+.legend { display: flex; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--tx2); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+
+.catatan-contoh { background: #fef4dc; color: #b77700; border-radius: 10px; padding: 10px 12px; font-size: 12px; margin-bottom: 16px; }
+
+@media (max-width: 1279px) {
+  .stat-row { grid-template-columns: repeat(6, 1fr); }
+  .stat-row .stat { grid-column: span 2; }
+  .stat-row .stat:nth-child(n+4) { grid-column: span 3; }
+}
+@media (max-width: 1100px) { .g2 { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  body { flex-direction: column; }
+  .sidebar { display: flex; width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--bd); }
+  .sidebar .logo { order: 1; padding: 0; }
+  .logo-img { max-width: 160px; }
+  .sidebar-user { order: 2; margin: 0; }
+  .sidebar-nav { order: 3; width: 100%; flex-direction: row; gap: 4px; overflow-x: auto; }
+  .sidebar-nav a { width: auto; flex-shrink: 0; white-space: nowrap; margin-bottom: 0; padding: 9px 14px; }
+  .sidebar-spacer, .sidebar-settings { display: none; }
+}
+@media (max-width: 640px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-row .stat, .stat-row .stat:nth-child(n+4) { grid-column: span 1; }
+  .stat-row .stat:last-child { grid-column: span 2; }
+}
+@media (max-width: 640px) {
+  .stat b { font-size: 16px; }
+  .tbl { min-width: 460px; }
+}
+
+/* ---- laporan ---- */
+.tbl th.r, .tbl td.r { text-align: right; }
+.tbl tfoot td { font-weight: 700; border-top: 2px solid var(--bd); border-bottom: 0; padding-top: 14px; }
+.tbl td a { color: inherit; text-decoration: none; }
+.tbl td a:hover { color: var(--or); }
+
+.filter { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+.filter label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+.filter input { font: inherit; color: var(--tx); background: var(--mu); border: 1px solid var(--bd); border-radius: 12px; height: 44px; padding: 0 14px; min-width: 170px; }
+.filter input:focus { outline: 0; border-color: var(--or); box-shadow: 0 0 0 3px #ffeee8; }
+.filter .btn { height: 44px; }
+.galat-kolom { color: var(--er); font-size: 11.5px; margin: 4px 0 0; }
+
+.stat-row.n4 { grid-template-columns: repeat(4, 1fr); }
+.stat-row.n4 .stat { grid-column: auto; }
+@media (max-width: 760px) { .stat-row.n4 { grid-template-columns: repeat(2, 1fr); } }
+
+.kartu-laporan { display: block; color: inherit; text-decoration: none; transition: box-shadow .15s, transform .15s; }
+.kartu-laporan:hover { box-shadow: 0 8px 24px rgba(23, 35, 61, .1); transform: translateY(-1px); }
+.kartu-laporan h3 { margin: 10px 0 6px; font-size: 15px; }
+.kartu-laporan p { margin: 0; color: var(--tx2); font-size: 12.5px; line-height: 1.5; }
+
+/* L-1 kartu pinjaman dan tombol unduh CSV */
+.kartu-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 24px; margin: 0; }
+.kartu-info dt { color: var(--tx2); font-size: 11.5px; margin: 0 0 2px; }
+.kartu-info dd { margin: 0; font-weight: 600; }
+.filter .btn-unduh { margin-left: auto; }
+.judul-seksi { font-size: 14px; font-weight: 700; margin: 22px 0 10px; }
+.kartu-info + * { margin-top: 0; }
+.card:has(> .kartu-info) { margin-bottom: 16px; }
+.kartu-info a, .sub a { color: var(--or); text-decoration: none; font-weight: 600; }
+.kartu-info a:hover, .sub a:hover { text-decoration: underline; }
+.tbl td.nw, .tbl th.nw { white-space: nowrap; }
