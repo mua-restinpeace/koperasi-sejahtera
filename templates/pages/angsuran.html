@@ -1,0 +1,71 @@
+{{define "content"}}
+<section class="page anggota-page">
+
+    <div class="anggota-heading">
+        <div>
+            <h1>Angsuran</h1>
+            <p class="anggota-subtitle">
+                Daftar anggota yang memiliki pinjaman aktif
+            </p>
+        </div>
+    </div>
+
+    <div class="anggota-card">
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>ID Pinjaman</th>
+                        <th>Anggota</th>
+                        <th>Jumlah Pinjaman</th>
+                        <th>Tenor</th>
+                        <th>Tanggal Cair</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {{if .Daftar}}
+                        {{range .Daftar}}
+                        <tr>
+                            <td>#{{.ID}}</td>
+
+                            <td>
+                                <strong>{{.NamaAnggota}}</strong><br>
+                                <small class="anggota-muted">
+                                    {{.NomorAnggota}}
+                                </small>
+                            </td>
+
+                            <td>{{rupiah .JumlahPinjaman}}</td>
+                            <td>{{.TenorBulan}} bulan</td>
+                            <td>{{.TanggalPencairan.Format "02-01-2006"}}</td>
+
+                            <td>
+                                <span class="anggota-badge anggota-badge-active">
+                                    Aktif
+                                </span>
+                            </td>
+
+                            <td>
+                                <a href="/angsuran/{{.ID}}" class="btn anggota-save-btn">
+                                    Bayar
+                                </a>
+                            </td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="7" class="anggota-empty">
+                                Tidak ada anggota dengan pinjaman aktif.
+                            </td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{{end}}

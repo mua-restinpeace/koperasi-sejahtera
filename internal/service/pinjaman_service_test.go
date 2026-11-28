@@ -180,11 +180,11 @@ func TestAjukanPinjaman(t *testing.T) {
 				aRepo,
 				sRepo,
 				NewAuditService(&fakeAudit{}),
-				3,      // kelipatan batas = 3x
-				6, 24,  // tenor 6..24
-				100,    // jasa 1%
-				2000,   // denda Rp2.000
-				200,    // biaya admin 2%
+				3,     // kelipatan batas = 3x
+				6, 24, // tenor 6..24
+				100,  // jasa 1%
+				2000, // denda Rp2.000
+				200,  // biaya admin 2%
 				time.UTC,
 				func() time.Time { return now },
 			)

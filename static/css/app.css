@@ -1325,3 +1325,314 @@ body {
   }
 }
 
+
+/* =====================================================
+   HALAMAN DETAIL PINJAMAN - FORM PEMBAYARAN
+   ===================================================== */
+
+
+.payment-section {
+    margin-top: 30px;
+    margin-bottom: 32px;
+}
+
+.payment-section-heading {
+    margin-bottom: 20px;
+}
+
+.payment-section-heading h2 {
+    margin: 0 0 6px;
+    color: #252a34;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.payment-section-heading p {
+    margin: 0;
+    color: #858b98;
+    font-size: 13px;
+}
+
+.payment-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-tab {
+    position: relative;
+    padding: 13px 18px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #858b98;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.payment-tab:hover {
+    color: #ff5722;
+}
+
+.payment-tab.active {
+    border-bottom-color: #ff5722;
+    color: #ff5722;
+}
+
+.payment-tab:focus-visible {
+    outline: 2px solid #ff5722;
+    outline-offset: 3px;
+    border-radius: 5px;
+}
+
+.payment-card {
+    padding: 26px;
+    border: 1px solid #eceef2;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 3px 12px rgba(25, 35, 55, 0.035);
+}
+
+.payment-panel[hidden] {
+    display: none !important;
+}
+
+.payment-panel-heading {
+    margin-bottom: 24px;
+}
+
+.payment-panel-heading h3 {
+    margin: 0 0 6px;
+    color: #252a34;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.payment-panel-heading p {
+    margin: 0;
+    color: #858b98;
+    font-size: 13px;
+}
+
+.payment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 640px;
+}
+
+.payment-form .anggota-field {
+    width: 100%;
+}
+
+.payment-form .anggota-field input {
+    box-sizing: border-box;
+    width: 100%;
+    background: #f5f6f8;
+}
+
+.payment-optional {
+    color: #969daa;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.payment-estimate {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    border: 1px solid #ffe1d5;
+    border-radius: 11px;
+    background: #fff7f3;
+}
+
+.payment-estimate span {
+    color: #777f8d;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.payment-estimate strong {
+    color: #f05a28;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.payment-estimate small {
+    color: #9299a5;
+    font-size: 11px;
+}
+
+.payment-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 4px;
+}
+
+.payment-actions .btn {
+    min-height: 42px;
+    padding: 0 22px;
+    border-radius: 9px;
+    background: #ff5722;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.payment-actions .btn:hover {
+    background: #e94b19;
+}
+
+@media (max-width: 600px) {
+    .payment-section {
+        margin-top: 22px;
+    }
+
+    .payment-tabs {
+        gap: 0;
+    }
+
+    .payment-tab {
+        flex: 1;
+        padding: 12px 8px;
+        font-size: 11px;
+        text-align: center;
+    }
+
+    .payment-card {
+        padding: 18px;
+    }
+
+    .payment-estimate strong {
+        font-size: 21px;
+    }
+
+    .payment-actions .btn {
+        width: 100%;
+    }
+}
+
+
+/* =====================================================
+   HEADER - SAPAAN, PENCARIAN, DAN NOTIFIKASI
+   ===================================================== */
+
+.topbar {
+    justify-content: space-between;
+    background: #ffffff;
+}
+
+.topbar-greeting {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.topbar-greeting span {
+    color: #858b98;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.topbar-greeting strong {
+    overflow: hidden;
+    color: #252a34;
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+@media (max-width: 600px) {
+    .topbar {
+        gap: 12px;
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .topbar-greeting strong {
+        max-width: 145px;
+    }
+
+    .topbar-actions {
+        gap: 8px;
+    }
+
+    .topbar-actions .global-search {
+        max-width: 170px;
+    }
+}
+
+
+/* FORM PEMBATALAN PEMBAYARAN */
+
+.payment-cancel-form {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 190px;
+    max-width: 260px;
+    margin: 0;
+}
+
+.payment-cancel-label {
+    color: #343a46;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.payment-cancel-controls {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.payment-cancel-input {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #e3e7ed;
+    border-radius: 8px;
+    background: #f3f5f8;
+    color: #343a46;
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+}
+
+.payment-cancel-input:focus {
+    border-color: #ff5722;
+    background: #ffffff;
+}
+
+.payment-cancel-button {
+    flex-shrink: 0;
+    min-height: 34px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    background: #ff5722;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.payment-cancel-button:hover {
+    background: #e94b19;
+}
