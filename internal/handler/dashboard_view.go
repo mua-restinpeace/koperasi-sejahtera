@@ -1,11 +1,17 @@
 package handler
 
-// Model tampilan Dashboard. Handler/service yang asli cukup mengisi struct ini;
-// template tidak perlu diubah. Semua uang int64 rupiah, tanggal sudah berupa teks.
+import (
+	"fmt"
+	"time"
+
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
+)
+
+// Model tampilan Dashboard: mengubah service.Dashboard menjadi isian template.
+// Semua uang int64 rupiah, tanggal sudah berupa teks.
 
 type dataDashboard struct {
 	Halaman
-	Contoh     bool // true selama data masih dari contohDashboard() (menampilkan catatan)
 	Ringkasan  ringkasanDashboard
 	Terlambat  []barisTerlambat
 	TotalTelat int
@@ -29,6 +35,7 @@ type barisTerlambat struct {
 	IDAnggota  int64
 	Nama       string
 	NoAnggota  string
+	IDPinjaman int64
 	NoPinjaman string
 	JatuhTempo string
 	Tagihan    int64
@@ -51,41 +58,58 @@ type titikGrafik struct {
 	DendaPct    int
 }
 
-// contohDashboard mengisi dashboard dengan angka contoh yang konsisten dengan
-// spesifikasi (jatuh tempo tanggal 10, simpanan wajib Rp100.000).
-// TODO: ganti dengan data dari service pinjaman/laporan bila sudah siap.
-func contohDashboard() dataDashboard {
+var singkatanBulan = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
+
+// tanggalPendek menulis tanggal seperti "10 Okt 2026".
+func tanggalPendek(t time.Time) string {
+	return fmt.Sprintf("%d %s %d", t.Day(), singkatanBulan[t.Month()-1], t.Year())
+}
+
+func tampilanDashboard(s service.Dashboard) dataDashboard {
 	d := dataDashboard{
-		Contoh:     true,
-		Periode:    "November 2026",
-		TotalTelat: 3,
-		TotalWajib: 41,
+		Periode:    s.Nama(),
+		TotalTelat: s.TotalTelat,
+		TotalWajib: s.TotalWajib,
 		Ringkasan: ringkasanDashboard{
-			AnggotaAktif: 248, AnggotaBaru: 3, PinjamanAktif: 64,
-			SisaPinjaman: 482_000_000, TotalSimpanan: 715_000_000,
-			PendapatanJasa: 4_820_000, PendapatanDenda: 392_000,
-		},
-		Terlambat: []barisTerlambat{
-			{1, "Andi Pratama", "KKS-0001", "PJ-2026-001", "10 Okt 2026", 1_528_571, 48},
-			{3, "Siti Rahmawati", "KKS-0003", "PJ-2026-007", "10 Nov 2026", 1_250_000, 17},
-			{4, "Agus Salim", "KKS-0004", "PJ-2026-012", "10 Nov 2026", 830_000, 17},
-		},
-		WajibBelum: []barisWajibBelum{
-			{2, "Rudi Hartono", "KKS-0002", 100_000, "Nov 2026"},
-			{6, "Maya Putri", "KKS-0006", 100_000, "Nov 2026"},
+			AnggotaAktif:    s.Ringkasan.AnggotaAktif,
+			AnggotaBaru:     s.Ringkasan.AnggotaBaru,
+			PinjamanAktif:   s.Ringkasan.PinjamanAktif,
+			SisaPinjaman:    s.Ringkasan.SisaPinjaman,
+			TotalSimpanan:   s.Ringkasan.TotalSimpanan,
+			PendapatanJasa:  s.Ringkasan.PendapatanJasa,
+			PendapatanDenda: s.Ringkasan.PendapatanDenda,
 		},
 	}
-	bulan := []string{"Jun", "Jul", "Agu", "Sep", "Okt", "Nov"}
-	jasa := []int64{3_900_000, 4_100_000, 4_350_000, 4_500_000, 4_700_000, 4_820_000}
-	denda := []int64{310_000, 250_000, 420_000, 380_000, 450_000, 392_000}
+
+	for _, b := range s.Terlambat {
+		d.Terlambat = append(d.Terlambat, barisTerlambat{
+			IDAnggota:  b.IDAnggota,
+			Nama:       b.NamaAnggota,
+			NoAnggota:  b.NomorAnggota,
+			IDPinjaman: b.IDPinjaman,
+			NoPinjaman: fmt.Sprintf("Pinjaman #%d · ke-%d", b.IDPinjaman, b.Urutan),
+			JatuhTempo: tanggalPendek(b.JatuhTempo),
+			Tagihan:    b.Total(),
+			HariTelat:  b.HariTerlambat,
+		})
+	}
+
+	periode := fmt.Sprintf("%s %d", singkatanBulan[s.Bulan.Month()-1], s.Bulan.Year())
+	for _, a := range s.WajibBelum {
+		d.WajibBelum = append(d.WajibBelum, barisWajibBelum{
+			IDAnggota: a.ID, Nama: a.NamaAnggota, NoAnggota: a.NomorAnggota,
+			Kekurangan: s.WajibPerBulan, Periode: periode,
+		})
+	}
+
 	var maks int64 = 1
-	for i := range bulan {
-		maks = max(maks, jasa[i], denda[i])
+	for _, p := range s.Grafik {
+		maks = max(maks, p.Jasa, p.Denda)
 	}
-	for i := range bulan {
+	for _, p := range s.Grafik {
 		d.Grafik = append(d.Grafik, titikGrafik{
-			Bulan: bulan[i], Jasa: jasa[i], Denda: denda[i],
-			JasaPct: int(jasa[i] * 100 / maks), DendaPct: int(denda[i] * 100 / maks),
+			Bulan: singkatanBulan[p.Bulan.Month()-1], Jasa: p.Jasa, Denda: p.Denda,
+			JasaPct: int(p.Jasa * 100 / maks), DendaPct: int(p.Denda * 100 / maks),
 		})
 	}
 	return d

@@ -29,3 +29,27 @@ type PinjamanLaporan struct {
 	NamaAnggota  string
 	DendaPerHari int64
 }
+
+// PinjamanKartu adalah data induk satu pinjaman beserta anggotanya, dipakai
+// kartu pinjaman (L-1) dan daftar pinjaman.
+type PinjamanKartu struct {
+	ID               int64
+	IDAnggota        int64
+	NomorAnggota     string
+	NamaAnggota      string
+	Jumlah           int64
+	TenorBulan       int
+	JasaBps          int
+	DendaPerHari     int64
+	TanggalPencairan time.Time
+	Status           string    // aktif, lunas
+	TanggalLunas     time.Time // nol bila belum lunas
+}
+
+// AnggotaWajibBelum adalah anggota aktif yang belum membayar simpanan wajib
+// pada suatu periode, dipakai dashboard.
+type AnggotaWajibBelum struct {
+	ID           int64
+	NomorAnggota string
+	NamaAnggota  string
+}

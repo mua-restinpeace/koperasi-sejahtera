@@ -3,8 +3,6 @@
     <h1>Dashboard</h1>
     <p class="sub">Ringkasan kondisi keuangan koperasi · {{.Periode}}</p>
 
-    {{if .Contoh}}<p class="catatan-contoh">Data contoh: dashboard belum tersambung ke data pinjaman.</p>{{end}}
-
     <div class="stat-row">
         <div class="card stat"><span>Anggota aktif</span><b>{{.Ringkasan.AnggotaAktif}}</b><em>+{{.Ringkasan.AnggotaBaru}} bulan ini</em></div>
         <div class="card stat"><span>Sisa pinjaman berjalan</span><b>{{rupiah .Ringkasan.SisaPinjaman}}</b><em>{{.Ringkasan.PinjamanAktif}} pinjaman aktif</em></div>
@@ -28,7 +26,7 @@
                         <td>{{.NoPinjaman}}<div class="mut">Jatuh tempo {{.JatuhTempo}}</div></td>
                         <td class="num">{{rupiah .Tagihan}}</td>
                         <td><span class="badge {{if ge .HariTelat 7}}badge-er{{else}}badge-wa{{end}}">{{.HariTelat}} hari</span></td>
-                        <td><a class="btn btn-sec btn-sm" href="/angsuran">Lihat</a></td>
+                        <td><a class="btn btn-sec btn-sm" href="/laporan/pinjaman/{{.IDPinjaman}}">Lihat</a></td>
                     </tr>
                     {{else}}
                     <tr><td colspan="5" class="kosong">Tidak ada angsuran terlambat.</td></tr>

@@ -26,6 +26,14 @@ type fakeLaporan struct {
 	errTunggakan  error
 	inPendapatan  service.PendapatanInput
 	inTunggakan   service.TunggakanInput
+
+	daftar   []model.PinjamanKartu
+	kartu    service.KartuPinjaman
+	errKartu error
+	inKartu  service.KartuInput
+
+	dashboard    service.Dashboard
+	errDashboard error
 }
 
 func (f *fakeLaporan) Pendapatan(_ context.Context, in service.PendapatanInput) (service.LaporanPendapatan, error) {
@@ -36,6 +44,19 @@ func (f *fakeLaporan) Pendapatan(_ context.Context, in service.PendapatanInput) 
 func (f *fakeLaporan) Tunggakan(_ context.Context, in service.TunggakanInput) (service.LaporanTunggakan, error) {
 	f.inTunggakan = in
 	return f.tunggakan, f.errTunggakan
+}
+
+func (f *fakeLaporan) DaftarPinjaman(context.Context) ([]model.PinjamanKartu, error) {
+	return f.daftar, nil
+}
+
+func (f *fakeLaporan) KartuPinjaman(_ context.Context, in service.KartuInput) (service.KartuPinjaman, error) {
+	f.inKartu = in
+	return f.kartu, f.errKartu
+}
+
+func (f *fakeLaporan) Dashboard(context.Context) (service.Dashboard, error) {
+	return f.dashboard, f.errDashboard
 }
 
 func tanggalUji(s string) time.Time {
@@ -233,5 +254,163 @@ func TestLaporan_GalatTakTerdugaTidakBocor(t *testing.T) {
 		if strings.Contains(rec.Body.String(), "rahasia") {
 			t.Error("detail galat bocor ke pengguna")
 		}
+	}
+}
+
+// ---------------------------------------------------------------------
+// L-1 kartu pinjaman dan ekspor CSV
+// ---------------------------------------------------------------------
+
+func kartuUji(t *testing.T, asOf string) service.KartuPinjaman {
+	t.Helper()
+	jadwal, err := helper.BuatJadwal(6_000_000, 6, 100, tanggalUji("2026-11-05"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range jadwal {
+		jadwal[i].IDPinjaman = 1
+	}
+	bayar := []model.Pembayaran{
+		{ID: 1, IDPinjaman: 1, Jenis: model.PembayaranAngsuran, TanggalBayar: tanggalUji("2027-01-15"), Jumlah: 1_500_000},
+		{ID: 2, IDPinjaman: 1, Jenis: model.PembayaranAngsuran, TanggalBayar: tanggalUji("2027-02-12"), Jumlah: 800_000},
+		{ID: 3, IDPinjaman: 1, Jenis: model.PembayaranPelunasan, TanggalBayar: tanggalUji("2027-02-20"), Jumlah: 4_178_000, BiayaAdmin: 80_000},
+	}
+	pj := model.PinjamanKartu{ID: 1, IDAnggota: 2, NomorAnggota: "KKS-0002", NamaAnggota: "Rudi Hartono", Jumlah: 6_000_000, TenorBulan: 6, JasaBps: 100, DendaPerHari: 2000, TanggalPencairan: tanggalUji("2026-11-05"), Status: "lunas", TanggalLunas: tanggalUji("2027-02-20")}
+	k, err := service.HitungKartu(pj, jadwal, bayar, tanggalUji(asOf), 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}
+
+func reqKartu(path string) *http.Request {
+	r := reqLogin(path)
+	r.SetPathValue("id", "1")
+	return r
+}
+
+func TestLaporanPinjaman_Daftar(t *testing.T) {
+	f := &fakeLaporan{daftar: []model.PinjamanKartu{{ID: 7, IDAnggota: 2, NomorAnggota: "KKS-0002", NamaAnggota: "Rudi Hartono", Jumlah: 6_000_000, TenorBulan: 6, TanggalPencairan: tanggalUji("2026-11-05"), Status: "aktif"}}}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanPinjaman(rec, reqLogin("/laporan/pinjaman"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	wajibMemuat(t, rec.Body.String(), "Rudi Hartono", "KKS-0002", "Rp6.000.000", "/laporan/pinjaman/7", "Aktif")
+}
+
+func TestLaporanPinjaman_DaftarKosong(t *testing.T) {
+	rec := httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{}).LaporanPinjaman(rec, reqLogin("/laporan/pinjaman"))
+	wajibMemuat(t, rec.Body.String(), "Belum ada pinjaman")
+}
+
+func TestLaporanKartu_ContohC(t *testing.T) {
+	f := &fakeLaporan{kartu: kartuUji(t, "2027-02-11")}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanKartu(rec, reqKartu("/laporan/pinjaman/1?tanggal=2027-02-11"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if f.inKartu.ID != 1 || f.inKartu.Tanggal != "2027-02-11" {
+		t.Errorf("input = %+v", f.inKartu)
+	}
+	body := rec.Body.String()
+	wajibMemuat(t, body, "Kartu Pinjaman #1", "Rudi Hartono", "Rp6.000.000", "Lunas", "Menunggak 32 hari", "Menunggak 1 hari", "Rp54.000", "Rp702.000",
+		"Belum jatuh tempo", "15-01-2027", "/laporan/pinjaman/1/csv?tanggal=2027-02-11", `value="2027-02-11"`)
+	simpanPratinjau(t, "KOPERASI_PREVIEW_KARTU", body)
+}
+
+func TestLaporanKartu_SetelahPelunasan(t *testing.T) {
+	f := &fakeLaporan{kartu: kartuUji(t, "2027-02-20")}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanKartu(rec, reqKartu("/laporan/pinjaman/1?tanggal=2027-02-20"))
+	body := rec.Body.String()
+	wajibMemuat(t, body, "Pelunasan dipercepat", "Rp4.178.000", "Rp80.000")
+	if strings.Contains(body, "Menunggak") {
+		t.Error("setelah pelunasan tidak boleh ada angsuran menunggak")
+	}
+}
+
+func TestLaporanKartu_TidakAdaDan404(t *testing.T) {
+	f := &fakeLaporan{errKartu: service.ErrPinjamanTidakDitemukan}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanKartu(rec, reqKartu("/laporan/pinjaman/1"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	r := reqLogin("/laporan/pinjaman/abc")
+	r.SetPathValue("id", "abc")
+	siapLaporan(t, &fakeLaporan{}).LaporanKartu(rec, r)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("id bukan angka: status = %d, want 404", rec.Code)
+	}
+}
+
+func TestLaporanKartu_Validasi(t *testing.T) {
+	f := &fakeLaporan{errKartu: &service.ValidasiError{Pesan: map[string]string{"tanggal": "Tanggal harus berformat tahun-bulan-hari."}}}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanKartu(rec, reqKartu("/laporan/pinjaman/1?tanggal=kemarin"))
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422", rec.Code)
+	}
+	wajibMemuat(t, rec.Body.String(), "Tanggal harus berformat tahun-bulan-hari.")
+}
+
+func cekUnduhan(t *testing.T, rec *httptest.ResponseRecorder, namaBerkas string) string {
+	t.Helper()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/csv") {
+		t.Errorf("Content-Type = %q", ct)
+	}
+	if cd := rec.Header().Get("Content-Disposition"); !strings.Contains(cd, "attachment") || !strings.Contains(cd, namaBerkas) {
+		t.Errorf("Content-Disposition = %q", cd)
+	}
+	if !strings.HasPrefix(rec.Body.String(), "\xEF\xBB\xBF") {
+		t.Error("CSV harus diawali BOM UTF-8")
+	}
+	return rec.Body.String()
+}
+
+func TestLaporanCSV_Pendapatan(t *testing.T) {
+	pend, _ := dataContohC(t)
+	f := &fakeLaporan{pendapatan: pend}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanPendapatanCSV(rec, reqLogin("/laporan/pendapatan/csv?dari=2027-01&sampai=2027-02"))
+	body := cekUnduhan(t, rec, "pendapatan-bulanan.csv")
+	wajibMemuat(t, body, "Januari 2027;120000;82000;0;202000", "Total;240000;158000;80000;478000")
+	if f.inPendapatan.Dari != "2027-01" {
+		t.Errorf("filter tidak diteruskan: %+v", f.inPendapatan)
+	}
+
+	rec = httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{errPendapatan: &service.ValidasiError{Pesan: map[string]string{"dari": "x"}}}).LaporanPendapatanCSV(rec, reqLogin("/laporan/pendapatan/csv?dari=salah"))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("filter salah: status = %d, want 400", rec.Code)
+	}
+}
+
+func TestLaporanCSV_Tunggakan(t *testing.T) {
+	_, tung := dataContohC(t)
+	rec := httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{tunggakan: tung}).LaporanTunggakanCSV(rec, reqLogin("/laporan/tunggakan/csv?tanggal=2027-02-11"))
+	body := cekUnduhan(t, rec, "tunggakan-2027-02-11.csv")
+	wajibMemuat(t, body, "KKS-0002;Rudi Hartono;1;2;2027-01-10;32;0;702000;54000;756000")
+}
+
+func TestLaporanCSV_Kartu(t *testing.T) {
+	rec := httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{kartu: kartuUji(t, "2027-02-20")}).LaporanKartuCSV(rec, reqKartu("/laporan/pinjaman/1/csv"))
+	body := cekUnduhan(t, rec, "kartu-pinjaman-1.csv")
+	wajibMemuat(t, body, "Kartu pinjaman;#1", "Total sisa tagihan;0", "2027-02-20;pelunasan;4178000;80000")
+
+	rec = httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{errKartu: service.ErrPinjamanTidakDitemukan}).LaporanKartuCSV(rec, reqKartu("/laporan/pinjaman/1/csv"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }

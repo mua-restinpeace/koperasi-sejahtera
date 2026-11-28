@@ -4,10 +4,16 @@ import (
 	"net/http"
 )
 
-// Beranda menampilkan dashboard. Sementara memakai data contoh sampai service
-// laporan tersedia (lihat contohDashboard di dashboard_view.go).
+// Beranda menampilkan dashboard dengan angka asli dari database
+// (lihat LaporanService.Dashboard).
 func (h *Handler) Beranda(w http.ResponseWriter, r *http.Request) {
-	d := contohDashboard()
+	hasil, err := h.svc.Laporan.Dashboard(r.Context())
+	if err != nil {
+		h.error(w, r, err)
+		return
+	}
+
+	d := tampilanDashboard(hasil)
 	d.Halaman = h.halaman(r, "Dashboard", "dashboard")
 	h.render(w, http.StatusOK, "pages/dashboard.html", d)
 }
