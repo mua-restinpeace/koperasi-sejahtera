@@ -307,6 +307,9 @@ type fakeLaporanRepo struct {
 	totalWajib   int
 	periodeWajib time.Time
 	batasWajib   int
+
+	wajibPeriode []model.AnggotaWajibBelum
+	periodeMinta time.Time
 }
 
 func (f *fakeLaporanRepo) Pembayaran(_ context.Context, _ database.DBTX, d, s *time.Time) ([]model.PembayaranLaporan, error) {

@@ -34,6 +34,10 @@ type fakeLaporan struct {
 
 	dashboard    service.Dashboard
 	errDashboard error
+
+	wajib    service.LaporanWajib
+	errWajib error
+	inWajib  service.WajibInput
 }
 
 func (f *fakeLaporan) Pendapatan(_ context.Context, in service.PendapatanInput) (service.LaporanPendapatan, error) {
@@ -57,6 +61,11 @@ func (f *fakeLaporan) KartuPinjaman(_ context.Context, in service.KartuInput) (s
 
 func (f *fakeLaporan) Dashboard(context.Context) (service.Dashboard, error) {
 	return f.dashboard, f.errDashboard
+}
+
+func (f *fakeLaporan) WajibBelumBayar(_ context.Context, in service.WajibInput) (service.LaporanWajib, error) {
+	f.inWajib = in
+	return f.wajib, f.errWajib
 }
 
 func tanggalUji(s string) time.Time {
@@ -412,5 +421,65 @@ func TestLaporanCSV_Kartu(t *testing.T) {
 	siapLaporan(t, &fakeLaporan{errKartu: service.ErrKartuPinjamanTidakAda}).LaporanKartuCSV(rec, reqKartu("/laporan/pinjaman/1/csv"))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+// ---------------------------------------------------------------------
+// L-4 simpanan wajib belum dibayar
+// ---------------------------------------------------------------------
+
+func wajibUji() service.LaporanWajib {
+	return service.HitungLaporanWajib(tanggalUji("2027-02-01"), []model.AnggotaWajibBelum{
+		{ID: 2, NomorAnggota: "KKS-0002", NamaAnggota: "Dewi Anggraini"},
+		{ID: 5, NomorAnggota: "KKS-0005", NamaAnggota: "Maya Putri"},
+	}, tanggalUji("2027-02-15"), 100_000)
+}
+
+func TestLaporanWajib_Halaman(t *testing.T) {
+	f := &fakeLaporan{wajib: wajibUji()}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanWajib(rec, reqLogin("/laporan/simpanan-wajib?periode=2027-02"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if f.inWajib.Periode != "2027-02" {
+		t.Errorf("filter tidak diteruskan: %+v", f.inWajib)
+	}
+	wajibMemuat(t, rec.Body.String(), "Simpanan Wajib Belum Dibayar", "Februari 2027", "10-02-2027", "2 anggota", "Rp200.000",
+		"Dewi Anggraini", "KKS-0005", "Terlambat 5 hari", "/simpanan/2", "/anggota/5", `value="2027-02"`,
+		"/laporan/simpanan-wajib/csv?periode=2027-02")
+}
+
+func TestLaporanWajib_BelumJatuhTempoDanKosong(t *testing.T) {
+	l := service.HitungLaporanWajib(tanggalUji("2027-02-01"), nil, tanggalUji("2027-02-05"), 100_000)
+	rec := httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{wajib: l}).LaporanWajib(rec, reqLogin("/laporan/simpanan-wajib"))
+	body := rec.Body.String()
+	wajibMemuat(t, body, "Belum jatuh tempo", "Semua anggota sudah membayar")
+	if strings.Contains(body, "Terlambat") {
+		t.Error("belum jatuh tempo tidak boleh menampilkan Terlambat")
+	}
+}
+
+func TestLaporanWajib_Validasi(t *testing.T) {
+	f := &fakeLaporan{errWajib: &service.ValidasiError{Pesan: map[string]string{"periode": "Periode harus berformat tahun-bulan."}}}
+	rec := httptest.NewRecorder()
+	siapLaporan(t, f).LaporanWajib(rec, reqLogin("/laporan/simpanan-wajib?periode=x"))
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422", rec.Code)
+	}
+	wajibMemuat(t, rec.Body.String(), "Periode harus berformat tahun-bulan.")
+}
+
+func TestLaporanWajib_CSV(t *testing.T) {
+	rec := httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{wajib: wajibUji()}).LaporanWajibCSV(rec, reqLogin("/laporan/simpanan-wajib/csv?periode=2027-02"))
+	body := cekUnduhan(t, rec, "simpanan-wajib-belum-2027-02.csv")
+	wajibMemuat(t, body, "KKS-0002;Dewi Anggraini;2027-02;2027-02-10;5;100000", "Total;2 anggota;;;;200000")
+
+	rec = httptest.NewRecorder()
+	siapLaporan(t, &fakeLaporan{errWajib: &service.ValidasiError{Pesan: map[string]string{"periode": "x"}}}).LaporanWajibCSV(rec, reqLogin("/laporan/simpanan-wajib/csv?periode=x"))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("periode salah: status = %d, want 400", rec.Code)
 	}
 }

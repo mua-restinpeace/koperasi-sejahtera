@@ -16,6 +16,14 @@ type LaporanService interface {
 	DaftarPinjaman(ctx context.Context) ([]model.PinjamanKartu, error)
 	KartuPinjaman(ctx context.Context, in service.KartuInput) (service.KartuPinjaman, error)
 	Dashboard(ctx context.Context) (service.Dashboard, error)
+	WajibBelumBayar(ctx context.Context, in service.WajibInput) (service.LaporanWajib, error)
+}
+
+type dataLaporanWajib struct {
+	Halaman
+	service.LaporanWajib
+	PeriodeIsian string // isi kolom bulan (YYYY-MM)
+	Error        map[string]string
 }
 
 type dataLaporanDaftarPinjaman struct {
@@ -188,4 +196,38 @@ func (h *Handler) LaporanKartuCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	isi, errCSV := hasil.CSV()
 	h.kirimCSV(w, r, "kartu-pinjaman-"+strconv.FormatInt(id, 10)+".csv", isi, errCSV)
+}
+
+// LaporanWajib menampilkan anggota yang belum membayar simpanan wajib suatu periode (L-4).
+// Filter: ?periode=YYYY-MM (kosong = bulan ini).
+func (h *Handler) LaporanWajib(w http.ResponseWriter, r *http.Request) {
+	in := service.WajibInput{Periode: r.URL.Query().Get("periode")}
+	hal := h.halaman(r, "Simpanan Wajib Belum Dibayar", "laporan")
+
+	hasil, err := h.svc.Laporan.WajibBelumBayar(r.Context(), in)
+	var ve *service.ValidasiError
+	switch {
+	case errors.As(err, &ve):
+		h.render(w, http.StatusUnprocessableEntity, "pages/laporan_wajib.html", dataLaporanWajib{Halaman: hal, PeriodeIsian: in.Periode, Error: ve.Pesan})
+	case err != nil:
+		h.error(w, r, err)
+	default:
+		h.render(w, http.StatusOK, "pages/laporan_wajib.html", dataLaporanWajib{Halaman: hal, LaporanWajib: hasil, PeriodeIsian: hasil.PeriodeInput()})
+	}
+}
+
+// LaporanWajibCSV mengunduh L-4 sebagai CSV; filter sama dengan halamannya.
+func (h *Handler) LaporanWajibCSV(w http.ResponseWriter, r *http.Request) {
+	hasil, err := h.svc.Laporan.WajibBelumBayar(r.Context(), service.WajibInput{Periode: r.URL.Query().Get("periode")})
+	var ve *service.ValidasiError
+	if errors.As(err, &ve) {
+		http.Error(w, "Periode tidak valid", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		h.error(w, r, err)
+		return
+	}
+	isi, errCSV := hasil.CSV()
+	h.kirimCSV(w, r, "simpanan-wajib-belum-"+hasil.PeriodeInput()+".csv", isi, errCSV)
 }

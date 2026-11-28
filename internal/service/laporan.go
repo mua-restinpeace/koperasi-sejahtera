@@ -30,6 +30,9 @@ type LaporanRepo interface {
 	RingkasanAnggota(ctx context.Context, db database.DBTX, awalBulan, hariIni time.Time) (aktif, baru int, err error)
 	TotalSimpanan(ctx context.Context, db database.DBTX) (int64, error)
 	WajibBelum(ctx context.Context, db database.DBTX, periode, hariIni time.Time, batas int) ([]model.AnggotaWajibBelum, int, error)
+
+	// L-4 simpanan wajib belum dibayar
+	WajibBelumPeriode(ctx context.Context, db database.DBTX, periode time.Time) ([]model.AnggotaWajibBelum, error)
 }
 
 // LaporanService menyusun laporan (hanya baca). Rumusnya ada di fungsi murni
