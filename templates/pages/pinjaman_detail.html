@@ -328,33 +328,35 @@
                         <td>
                             {{if not .DibatalkanPada}}
                             <form method="POST"
-                                  action="/pinjaman/{{$.Detail.Pinjaman.ID}}/pembayaran/{{.ID}}/batal"
-                                  class="anggota-form">
+                                action="/pinjaman/{{$.Detail.Pinjaman.ID}}/pembayaran/{{.ID}}/batal"
+                                class="payment-cancel-form">
 
                                 <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
 
-                                <label for="alasan-{{.ID}}">
+                                <label for="alasan-{{.ID}}" class="payment-cancel-label">
                                     Alasan Pembatalan
                                 </label>
 
-                                <input
-                                    id="alasan-{{.ID}}"
-                                    name="alasan"
-                                    type="text"
-                                    maxlength="255"
-                                    required
-                                >
+                                <div class="payment-cancel-controls">
+                                    <input
+                                        id="alasan-{{.ID}}"
+                                        name="alasan"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Masukkan alasan"
+                                        required
+                                        class="payment-cancel-input">
 
-                                <button type="submit" class="anggota-button">
-                                    Batalkan
-                                </button>
+                                    <button type="submit" class="btn payment-cancel-button">
+                                        Batalkan
+                                    </button>
+                                </div>
                             </form>
                             {{else}}
                             <span class="anggota-muted">-</span>
                             {{end}}
                         </td>
                     </tr>
-
                     {{else}}
                     <tr>
                         <td colspan="7" class="anggota-empty">
