@@ -189,6 +189,84 @@ func (h *Handler) DetailPinjaman(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// HalamanPembayaranAngsuran menampilkan formulir angsuran dan pelunasan.
+func (h *Handler) HalamanPembayaranAngsuran(w http.ResponseWriter, r *http.Request) {
+	id, ok := idDariPath(r)
+	if !ok {
+		h.notFound(w)
+		return
+	}
+
+	h.renderHalamanPembayaranAngsuran(
+		w,
+		r,
+		id,
+		http.StatusOK,
+		nil,
+		pesanBerhasilPembayaran(r.URL.Query().Get("berhasil")),
+	)
+}
+
+// renderHalamanPembayaranAngsuran memuat halaman pembayaran beserta pesan.
+func (h *Handler) renderHalamanPembayaranAngsuran(
+	w http.ResponseWriter,
+	r *http.Request,
+	id int64,
+	status int,
+	galat map[string]string,
+	pesan string,
+) {
+	detail, err := h.svc.Pinjaman.Detail(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, service.ErrPinjamanTidakDitemukan) {
+			h.notFound(w)
+			return
+		}
+		h.internalError(w, r, err)
+		return
+	}
+
+	// Halaman transaksi hanya untuk pinjaman aktif,
+	// kecuali ketika menampilkan hasil pelunasan yang berhasil.
+	hasilPelunasan := r.URL.Query().Get("berhasil") == "pelunasan"
+
+	if detail.Status != "aktif" && !hasilPelunasan {
+		http.Redirect(
+			w,
+			r,
+			fmt.Sprintf("/pinjaman/%d", id),
+			http.StatusSeeOther,
+		)
+		return
+	}
+
+	pembayaran, err := h.svc.Pembayaran.GetDetailPinjaman(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, service.ErrPinjamanTidakDitemukan) {
+			h.notFound(w)
+			return
+		}
+		h.internalError(w, r, err)
+		return
+	}
+
+	hal := h.halaman(
+		r,
+		fmt.Sprintf("Pembayaran Pinjaman #%d - %s", detail.ID, detail.NamaAnggota),
+		"angsuran",
+	)
+	hal.Pesan = pesan
+
+	data := dataDetailPinjaman{
+		Halaman:    hal,
+		Detail:     detail,
+		Pembayaran: pembayaran,
+		Error:      galat,
+	}
+
+	h.render(w, status, "pages/angsuran_detail.html", data)
+}
+
 // renderDetailPinjaman menggabungkan data pinjaman dan pembayaran.
 func (h *Handler) renderDetailPinjaman(
 	w http.ResponseWriter,
@@ -233,4 +311,21 @@ func (h *Handler) renderDetailPinjaman(
 	}
 
 	h.render(w, status, "pages/pinjaman_detail.html", data)
+}
+
+// DaftarAngsuran menampilkan daftar anggota yang memiliki pinjaman aktif.
+func (h *Handler) DaftarAngsuran(w http.ResponseWriter, r *http.Request) {
+	list, err := h.svc.Pinjaman.List(r.Context(), "aktif")
+	if err != nil {
+		h.internalError(w, r, err)
+		return
+	}
+
+	data := dataDaftarPinjaman{
+		Halaman:      h.halaman(r, "Daftar Angsuran", "angsuran"),
+		Daftar:       list,
+		FilterStatus: "aktif",
+	}
+
+	h.render(w, http.StatusOK, "pages/angsuran.html", data)
 }

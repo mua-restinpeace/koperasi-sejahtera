@@ -139,12 +139,20 @@ func (h *Handler) hasilPembayaran(
 ) {
 	var ve *service.ValidasiError
 
+	// Pembatalan tetap menggunakan halaman Detail Pinjaman.
+	halamanDetail := kode == "batal"
+
 	switch {
 	case err == nil:
+		tujuan := "angsuran"
+		if halamanDetail {
+			tujuan = "pinjaman"
+		}
+
 		http.Redirect(
 			w,
 			r,
-			fmt.Sprintf("/pinjaman/%d?berhasil=%s", idPinjaman, kode),
+			fmt.Sprintf("/%s/%d?berhasil=%s", tujuan, idPinjaman, kode),
 			http.StatusSeeOther,
 		)
 
@@ -153,25 +161,49 @@ func (h *Handler) hasilPembayaran(
 		h.notFound(w)
 
 	case errors.As(err, &ve):
-		h.halamanDetailPinjaman(
-			w,
-			r,
-			idPinjaman,
-			http.StatusUnprocessableEntity,
-			ve.Pesan,
-			"",
-		)
+		if halamanDetail {
+			h.halamanDetailPinjaman(
+				w,
+				r,
+				idPinjaman,
+				http.StatusUnprocessableEntity,
+				ve.Pesan,
+				"",
+			)
+		} else {
+			h.renderHalamanPembayaranAngsuran(
+				w,
+				r,
+				idPinjaman,
+				http.StatusUnprocessableEntity,
+				ve.Pesan,
+				"",
+			)
+		}
 
 	case errors.Is(err, service.ErrPinjamanTidakAktif),
 		errors.Is(err, service.ErrPembayaranSudahDibatalkan):
-		h.halamanDetailPinjaman(
-			w,
-			r,
-			idPinjaman,
-			http.StatusConflict,
-			map[string]string{"aturan": err.Error() + "."},
-			"",
-		)
+		galat := map[string]string{"aturan": err.Error() + "."}
+
+		if halamanDetail {
+			h.halamanDetailPinjaman(
+				w,
+				r,
+				idPinjaman,
+				http.StatusConflict,
+				galat,
+				"",
+			)
+		} else {
+			h.renderHalamanPembayaranAngsuran(
+				w,
+				r,
+				idPinjaman,
+				http.StatusConflict,
+				galat,
+				"",
+			)
+		}
 
 	default:
 		h.error(w, r, err)
