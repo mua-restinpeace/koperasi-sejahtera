@@ -1,0 +1,301 @@
+﻿
+{{define "content"}}
+<section class="page anggota-detail-page">
+
+    <div class="anggota-form-heading">
+        <div>
+            <h1>Detail Pinjaman #{{.Detail.Pinjaman.ID}}</h1>
+            <p class="anggota-form-subtitle">
+                Pinjaman anggota #{{.Detail.Pinjaman.IDAnggota}}
+                ·
+                <span class="anggota-badge">{{.Detail.Pinjaman.Status}}</span>
+            </p>
+        </div>
+
+        <a href="/anggota/{{.Detail.Pinjaman.IDAnggota}}" class="anggota-back-link">
+            ← Kembali ke Profil Anggota
+        </a>
+    </div>
+
+    {{if .Error}}
+    <div class="anggota-card">
+        {{range $field, $pesan := .Error}}
+        <p class="anggota-muted">{{$pesan}}</p>
+        {{end}}
+    </div>
+    {{end}}
+
+    <!-- INFORMASI DAN ESTIMASI PINJAMAN -->
+    <div class="anggota-detail-grid">
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Informasi Pinjaman</h3>
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr><td>Jumlah pinjaman</td><td>{{rupiah .Detail.Pinjaman.JumlahPinjaman}}</td></tr>
+                    <tr><td>Tenor</td><td>{{.Detail.Pinjaman.TenorBulan}} bulan</td></tr>
+                    <tr><td>Jasa per bulan</td><td>{{.Detail.Pinjaman.JasaPerBulanBps}} bps</td></tr>
+                    <tr><td>Denda per hari</td><td>{{rupiah .Detail.Pinjaman.DendaPerHari}}</td></tr>
+                    <tr><td>Tanggal pencairan</td><td>{{.Detail.Pinjaman.TanggalPencairan.Format "02-01-2006"}}</td></tr>
+                    <tr>
+                        <td>Tanggal pelunasan</td>
+                        <td>{{if .Detail.Pinjaman.TanggalLunas}}{{.Detail.Pinjaman.TanggalLunas.Format "02-01-2006"}}{{else}}-{{end}}</td>
+                    </tr>
+                    <tr><td>Status</td><td>{{.Detail.Pinjaman.Status}}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        {{if eq .Detail.Pinjaman.Status "aktif"}}
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Estimasi Pelunasan</h3>
+            <table class="anggota-saldo-table">
+                <tbody>
+                    <tr><td>Sisa pokok</td><td>{{rupiah .Detail.RincianPelunasan.SisaPokok}}</td></tr>
+                    <tr><td>Denda</td><td>{{rupiah .Detail.RincianPelunasan.Denda}}</td></tr>
+                    <tr><td>Jasa jatuh tempo</td><td>{{rupiah .Detail.RincianPelunasan.JasaJatuhTempo}}</td></tr>
+                    <tr><td>Jasa bulan berjalan</td><td>{{rupiah .Detail.RincianPelunasan.JasaBulanBerjalan}}</td></tr>
+                    <tr><td>Biaya administrasi</td><td>{{rupiah .Detail.RincianPelunasan.BiayaAdmin}}</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr><td>Total estimasi</td><td>{{rupiah .Detail.RincianPelunasan.Total}}</td></tr>
+                </tfoot>
+            </table>
+            <p class="anggota-muted">
+                Nilai ini merupakan estimasi berdasarkan perhitungan tanggal hari ini.
+            </p>
+        </div>
+        {{end}}
+
+    </div>
+
+    <!-- FORM PEMBAYARAN DAN PELUNASAN -->
+    {{if eq .Detail.Pinjaman.Status "aktif"}}
+    <div class="anggota-detail-grid">
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Catat Pembayaran Angsuran</h3>
+
+            <form method="POST"
+                  action="/pinjaman/{{.Detail.Pinjaman.ID}}/pembayaran"
+                  class="anggota-form">
+
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <label for="tanggal_bayar">Tanggal Pembayaran</label>
+                <input
+                    id="tanggal_bayar"
+                    name="tanggal_bayar"
+                    type="date"
+                    required
+                >
+
+                <label for="jumlah">Jumlah Pembayaran</label>
+                <input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    min="1"
+                    max="1000000000"
+                    required
+                >
+
+                <label for="keterangan">Keterangan</label>
+                <input
+                    id="keterangan"
+                    name="keterangan"
+                    type="text"
+                    maxlength="255"
+                >
+
+                <button type="submit" class="anggota-button">
+                    Simpan Pembayaran
+                </button>
+            </form>
+        </div>
+
+        <div class="anggota-card">
+            <h3 class="anggota-detail-title">Pelunasan Pinjaman</h3>
+
+            <p class="anggota-muted">
+                Pelunasan dihitung secara otomatis berdasarkan rincian
+                pelunasan pinjaman.
+            </p>
+
+            <form method="POST"
+                  action="/pinjaman/{{.Detail.Pinjaman.ID}}/pelunasan"
+                  class="anggota-form">
+
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+                <label for="tanggal_pelunasan">Tanggal Pelunasan</label>
+                <input
+                    id="tanggal_pelunasan"
+                    name="tanggal_bayar"
+                    type="date"
+                    required
+                >
+
+                <label for="keterangan_pelunasan">Keterangan</label>
+                <input
+                    id="keterangan_pelunasan"
+                    name="keterangan"
+                    type="text"
+                    maxlength="255"
+                >
+
+                <button type="submit" class="anggota-button">
+                    Proses Pelunasan
+                </button>
+            </form>
+        </div>
+
+    </div>
+    {{end}}
+
+    <!-- JADWAL DAN STATUS ANGSURAN -->
+    <div class="anggota-card">
+        <h3 class="anggota-detail-title">Jadwal dan Status Angsuran</h3>
+
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>Angsuran</th>
+                        <th>Jatuh Tempo</th>
+                        <th>Pokok</th>
+                        <th>Jasa</th>
+                        <th>Pokok Dibayar</th>
+                        <th>Jasa Dibayar</th>
+                        <th>Denda Terutang</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {{range .Detail.Angsuran}}
+                    <tr>
+                        <td>{{.Urutan}}</td>
+                        <td>{{.JatuhTempo.Format "02-01-2006"}}</td>
+                        <td>{{rupiah .Pokok}}</td>
+                        <td>{{rupiah .Jasa}}</td>
+                        <td>{{rupiah .PokokDibayar}}</td>
+                        <td>{{rupiah .JasaDibayar}}</td>
+                        <td>{{rupiah .DendaTerutang}}</td>
+                        <td>
+                            {{if .IsLunas}}
+                            <span class="anggota-badge">Lunas</span>
+                            {{else}}
+                            <span class="anggota-badge anggota-badge-exit">Belum lunas</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="8" class="anggota-empty">
+                            Belum ada jadwal angsuran.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RIWAYAT PEMBAYARAN -->
+    <div class="anggota-card">
+        <h3 class="anggota-detail-title">Riwayat Pembayaran</h3>
+
+        <div class="anggota-table-wrapper">
+            <table class="anggota-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Jenis</th>
+                        <th>Jumlah</th>
+                        <th>Biaya Administrasi</th>
+                        <th>Keterangan</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {{range .Detail.RiwayatPembayaran}}
+                    <tr>
+                        <td>{{.TanggalBayar.Format "02-01-2006"}}</td>
+                        <td>{{.Jenis}}</td>
+
+                        <td>
+                            {{if .DibatalkanPada}}
+                            <s>{{rupiah .Jumlah}}</s>
+                            {{else}}
+                            {{rupiah .Jumlah}}
+                            {{end}}
+                        </td>
+
+                        <td>{{rupiah .BiayaAdmin}}</td>
+
+                        <td>
+                            {{.Keterangan}}
+                            {{if .DibatalkanPada}}
+                            <p class="anggota-muted">
+                                {{.AlasanPembatalan}}
+                            </p>
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if .DibatalkanPada}}
+                            <span class="anggota-badge anggota-badge-exit">
+                                Dibatalkan
+                            </span>
+                            {{else}}
+                            <span class="anggota-badge">Berhasil</span>
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if not .DibatalkanPada}}
+                            <form method="POST"
+                                  action="/pinjaman/{{$.Detail.Pinjaman.ID}}/pembayaran/{{.ID}}/batal"
+                                  class="anggota-form">
+
+                                <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+
+                                <label for="alasan-{{.ID}}">
+                                    Alasan Pembatalan
+                                </label>
+
+                                <input
+                                    id="alasan-{{.ID}}"
+                                    name="alasan"
+                                    type="text"
+                                    maxlength="255"
+                                    required
+                                >
+
+                                <button type="submit" class="anggota-button">
+                                    Batalkan
+                                </button>
+                            </form>
+                            {{else}}
+                            <span class="anggota-muted">-</span>
+                            {{end}}
+                        </td>
+                    </tr>
+
+                    {{else}}
+                    <tr>
+                        <td colspan="7" class="anggota-empty">
+                            Belum ada riwayat pembayaran.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{{end}}

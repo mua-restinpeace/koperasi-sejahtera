@@ -11,12 +11,15 @@ const (
 )
 
 type Pembayaran struct {
-	ID           int64
-	IDPinjaman   int64
-	Jenis        JenisPembayaran
-	TanggalBayar time.Time
-	Jumlah       int64
-	BiayaAdmin   int64 // hanya untuk pelunasan; bukan bagian dari alokasi angsuran
+	ID               int64
+	IDPinjaman       int64
+	Jenis            JenisPembayaran
+	TanggalBayar     time.Time
+	Jumlah           int64
+	BiayaAdmin       int64 // hanya untuk pelunasan; bukan bagian dari alokasi angsuran
+	Keterangan       string
+	DibatalkanPada   *time.Time
+	AlasanPembatalan string
 }
 
 type RincianPelunasan struct {

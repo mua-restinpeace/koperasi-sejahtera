@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/config"
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/helper"
+	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
 )
 
 type Handler struct {
@@ -21,9 +23,35 @@ type Handler struct {
 }
 
 type Service struct {
-	Auth     AuthService
-	Anggota  AnggotaService
-	Simpanan SimpananService
+	Auth       AuthService
+	Anggota    AnggotaService
+	Simpanan   SimpananService
+	Pembayaran PembayaranService
+}
+
+type PembayaranService interface {
+	GetDetailPinjaman(
+		ctx context.Context,
+		idPinjaman int64,
+	) (service.DetailPinjaman, error)
+
+	CatatPembayaran(
+		ctx context.Context,
+		idPinjaman int64,
+		in service.CatatPembayaranInput,
+	) (int64, error)
+
+	CatatPelunasan(
+		ctx context.Context,
+		idPinjaman int64,
+		in service.CatatPelunasanInput,
+	) (service.HasilPelunasan, error)
+
+	BatalkanPembayaran(
+		ctx context.Context,
+		idPembayaran int64,
+		alasan string,
+	) (int64, error)
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang
