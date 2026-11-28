@@ -78,6 +78,9 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("GET /laporan/pendapatan/csv", r.h.LaporanPendapatanCSV)
 	r.Protected("GET /laporan/tunggakan", r.h.LaporanTunggakan)
 	r.Protected("GET /laporan/tunggakan/csv", r.h.LaporanTunggakanCSV)
+	r.Protected("GET /laporan/simpanan-wajib", r.h.LaporanWajib)
+	r.Protected("GET /laporan/simpanan-wajib/csv", r.h.LaporanWajibCSV)
+
 	// Angsuran
 	r.Protected("GET /angsuran", r.h.DaftarAngsuran)
 	r.Protected("GET /angsuran/{id}", r.h.HalamanPembayaranAngsuran)

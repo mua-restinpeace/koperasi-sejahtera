@@ -1,0 +1,49 @@
+{{define "content"}}
+<section class="page">
+    <h1>Simpanan Wajib Belum Dibayar</h1>
+    <p class="sub">Anggota yang belum menyetor simpanan wajib pada periode yang dipilih. Simpanan wajib jatuh tempo setiap tanggal 10.</p>
+
+    <form class="card filter" method="get" action="/laporan/simpanan-wajib">
+        <div>
+            <label for="periode">Periode</label>
+            <input id="periode" name="periode" type="month" value="{{.PeriodeIsian}}">
+            {{with index .Error "periode"}}<p class="galat-kolom">{{.}}</p>{{end}}
+        </div>
+        <button type="submit" class="btn">Terapkan</button>
+        <a class="btn btn-sec" href="/laporan/simpanan-wajib">Bulan ini</a>
+        {{if not .Error}}<a class="btn btn-sec btn-unduh" href="/laporan/simpanan-wajib/csv?periode={{.PeriodeIsian}}">Unduh CSV</a>{{end}}
+    </form>
+
+    {{if not .Error}}
+    <div class="stat-row n4">
+        <div class="card stat"><span>Periode</span><b>{{.Nama}}</b><em>Jatuh tempo {{.JatuhTempo.Format "02-01-2006"}}</em></div>
+        <div class="card stat"><span>Belum membayar</span><b>{{len .Baris}} anggota</b></div>
+        <div class="card stat hl"><span>Total kekurangan</span><b>{{rupiah .TotalKekurangan}}</b></div>
+        <div class="card stat"><span>Status periode</span><b>{{if .Terlambat}}Terlambat {{.HariTerlambat}} hari{{else}}Belum jatuh tempo{{end}}</b></div>
+    </div>
+
+    <div class="card">
+        <div class="tw">
+            <table class="tbl">
+                <thead>
+                    <tr><th>Anggota</th><th>Periode</th><th class="r">Kekurangan</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {{range .Baris}}
+                    <tr>
+                        <td><a href="/anggota/{{.ID}}"><b>{{.NamaAnggota}}</b></a><div class="mut">{{.NomorAnggota}}</div></td>
+                        <td>{{$.Nama}}</td>
+                        <td class="num r">{{rupiah $.PerAnggota}}</td>
+                        <td><span class="badge {{if $.Terlambat}}badge-er{{else}}badge-wa{{end}}">{{if $.Terlambat}}Terlambat {{$.HariTerlambat}} hari{{else}}Belum jatuh tempo{{end}}</span></td>
+                        <td class="r"><a class="btn btn-sm btn-sec" href="/simpanan/{{.ID}}">Catat</a></td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="5" class="kosong">Semua anggota sudah membayar simpanan wajib periode ini.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
+</section>
+{{end}}

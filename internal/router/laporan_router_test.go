@@ -37,6 +37,10 @@ func (fakeLaporanKosong) Dashboard(context.Context) (service.Dashboard, error) {
 	return service.Dashboard{Bulan: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)}, nil
 }
 
+func (fakeLaporanKosong) WajibBelumBayar(context.Context, service.WajibInput) (service.LaporanWajib, error) {
+	return service.HitungLaporanWajib(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), nil, time.Date(2026, 11, 28, 0, 0, 0, 0, time.UTC), 100_000), nil
+}
+
 func TestLaporan_Rute(t *testing.T) {
 	cfg := config.Default()
 	auth := &fakeAuth{}
@@ -47,7 +51,7 @@ func TestLaporan_Rute(t *testing.T) {
 	}
 	r := router.NewRouter(h, auth, log)
 
-	for _, path := range []string{"/laporan", "/laporan/pinjaman", "/laporan/pinjaman/1", "/laporan/pinjaman/1/csv", "/laporan/pendapatan", "/laporan/pendapatan/csv", "/laporan/tunggakan", "/laporan/tunggakan/csv"} {
+	for _, path := range []string{"/laporan", "/laporan/pinjaman", "/laporan/pinjaman/1", "/laporan/pinjaman/1/csv", "/laporan/pendapatan", "/laporan/pendapatan/csv", "/laporan/tunggakan", "/laporan/tunggakan/csv", "/laporan/simpanan-wajib", "/laporan/simpanan-wajib/csv"} {
 		t.Run("tanpa login "+path, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))

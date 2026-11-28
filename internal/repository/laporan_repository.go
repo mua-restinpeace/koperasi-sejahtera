@@ -327,3 +327,35 @@ func (LaporanRepo) WajibBelum(ctx context.Context, db database.DBTX, periode, ha
 	}
 	return hasil, total, petakanError(rows.Err(), "baca wajib belum")
 }
+
+// WajibBelumPeriode mengembalikan semua anggota yang pada periode itu (tanggal 1 bulan
+// yang dibayar) sudah menjadi anggota, belum keluar sampai akhir bulan, dan belum
+// menyetor simpanan wajib untuk periode tersebut. Setoran yang dibatalkan dianggap belum bayar.
+func (LaporanRepo) WajibBelumPeriode(ctx context.Context, db database.DBTX, periode time.Time) ([]model.AnggotaWajibBelum, error) {
+	akhir := time.Date(periode.Year(), periode.Month()+1, 0, 0, 0, 0, 0, time.UTC)
+	query := `SELECT a.id, a.nomor_anggota, a.nama_lengkap
+	FROM anggota a
+	WHERE a.tanggal_bergabung <= ? AND (a.tanggal_keluar IS NULL OR a.tanggal_keluar > ?)
+	AND NOT EXISTS (
+		SELECT 1 FROM transaksi_simpanan t
+		WHERE t.id_anggota = a.id AND t.kategori = 'wajib' AND t.tipe_mutasi = 'setor'
+		AND t.dibatalkan_pada IS NULL AND t.periode = ?
+	)
+	ORDER BY a.nomor_anggota`
+
+	rows, err := db.QueryContext(ctx, query, akhir.Format(formatTanggal), akhir.Format(formatTanggal), periode.Format(formatTanggal))
+	if err != nil {
+		return nil, petakanError(err, "wajib belum per periode")
+	}
+	defer rows.Close()
+
+	var hasil []model.AnggotaWajibBelum
+	for rows.Next() {
+		var a model.AnggotaWajibBelum
+		if err := rows.Scan(&a.ID, &a.NomorAnggota, &a.NamaAnggota); err != nil {
+			return nil, petakanError(err, "scan wajib belum per periode")
+		}
+		hasil = append(hasil, a)
+	}
+	return hasil, petakanError(rows.Err(), "baca wajib belum per periode")
+}
