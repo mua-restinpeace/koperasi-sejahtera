@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,31 @@ import (
 
 	"github.com/mua-restinpeace/koperasi-sejahtera/internal/service"
 )
+
+type PembayaranService interface {
+	GetDetailPinjaman(
+		ctx context.Context,
+		idPinjaman int64,
+	) (service.DetailPinjaman, error)
+
+	CatatPembayaran(
+		ctx context.Context,
+		idPinjaman int64,
+		in service.CatatPembayaranInput,
+	) (int64, error)
+
+	CatatPelunasan(
+		ctx context.Context,
+		idPinjaman int64,
+		in service.CatatPelunasanInput,
+	) (service.HasilPelunasan, error)
+
+	BatalkanPembayaran(
+		ctx context.Context,
+		idPembayaran int64,
+		alasan string,
+	) (int64, error)
+}
 
 type HalamanDetailPinjaman struct {
 	Halaman
