@@ -26,6 +26,7 @@ type Service struct {
 	Simpanan SimpananService
 	Laporan  LaporanService
 	Pinjaman PinjamanService
+	Pembayaran PembayaranService
 }
 
 // New membuat Handler dan memuat seluruh template dari templatesFS, yang

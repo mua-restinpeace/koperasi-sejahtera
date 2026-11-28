@@ -78,12 +78,20 @@ func NewRouter(h *handler.Handler, auth middleware.Authenticator, log *slog.Logg
 	r.Protected("GET /laporan/pendapatan/csv", r.h.LaporanPendapatanCSV)
 	r.Protected("GET /laporan/tunggakan", r.h.LaporanTunggakan)
 	r.Protected("GET /laporan/tunggakan/csv", r.h.LaporanTunggakanCSV)
+	// Angsuran
+	r.Protected("GET /angsuran", r.h.DaftarAngsuran)
+	r.Protected("GET /angsuran/{id}", r.h.HalamanPembayaranAngsuran)
 
 	// Pinjaman
 	r.Protected("GET /pinjaman", r.h.DaftarPinjaman)
 	r.Protected("GET /pinjaman/baru", r.h.FormPengajuan)
 	r.Protected("POST /pinjaman", r.h.SimpanPinjaman)
 	r.Protected("GET /pinjaman/{id}", r.h.DetailPinjaman)
+
+	// Pembayaran dan pembatalan pembayaran
+	r.Protected("POST /pinjaman/{id}/pembayaran", r.h.CatatPembayaran)
+	r.Protected("POST /pinjaman/{id}/pelunasan", r.h.CatatPelunasan)
+	r.Protected("POST /pinjaman/{id}/pembayaran/{pembayaranID}/batal", r.h.BatalkanPembayaran)
 
 	// urutan dari luar ke dalam: header, log, batas body, sesi, lalu mux.
 	var out http.Handler = mux
