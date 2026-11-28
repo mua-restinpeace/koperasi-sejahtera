@@ -742,7 +742,7 @@ body {
 }
 
 .anggota-filter {
-  width: 120px;
+  /* width: 120px; */
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--bd);

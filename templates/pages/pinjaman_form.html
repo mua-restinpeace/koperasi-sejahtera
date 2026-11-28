@@ -27,7 +27,7 @@
 
                 <div class="anggota-field">
                     <label for="id_anggota">Pilih Anggota Peminjam *</label>
-                    <select id="id_anggota" name="id_anggota" required onchange="window.location.href='/pinjaman/baru?id_anggota=' + this.value">
+                    <select id="id_anggota" class="anggota-filter" name="id_anggota" required onchange="window.location.href='/pinjaman/baru?id_anggota=' + this.value">
                         <option value="">-- Pilih Anggota Aktif --</option>
                         {{range .DaftarAnggota}}
                             <option value="{{.ID}}" {{if eq .ID $.Isian.IDAnggota}}selected{{end}}>
@@ -54,7 +54,7 @@
 
                 <div class="anggota-field">
                     <label for="tenor">Tenor (Bulan) *</label>
-                    <select id="tenor" name="tenor" required>
+                    <select id="tenor" class="anggota-filter" name="tenor" required>
                         <option value="6" {{if eq .Isian.Tenor 6}}selected{{end}}>6 Bulan</option>
                         <option value="12" {{if eq .Isian.Tenor 12}}selected{{end}}>12 Bulan</option>
                         <option value="18" {{if eq .Isian.Tenor 18}}selected{{end}}>18 Bulan</option>
